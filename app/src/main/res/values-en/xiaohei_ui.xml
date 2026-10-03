@@ -3,4 +3,5 @@
     <string name="xiaohei_voice_stop_answering">Stop answering</string>
     <string name="xiaohei_voice_end_session">End voice</string>
     <string name="xiaohei_voice_stop_answering_listen_continues">Listening continues after this</string>
+    <string name="xiaohei_updates_unavailable">Online updates are not available for this Xiaohei test build. Do not install upstream Operit updates. See xiaohei.weichao.studio for progress.</string>
 </resources>

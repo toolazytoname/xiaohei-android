@@ -5,6 +5,8 @@ import com.ai.assistance.operit.util.AppLogger
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
+import com.ai.assistance.operit.core.commonbase.XiaoheiUpdatePolicy
 import com.ai.assistance.operit.data.api.GitHubApiService
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.util.GithubReleaseUtil
@@ -130,7 +132,17 @@ class UpdateManager private constructor(private val context: Context) {
     }
 
     /** 检查更新的内部实现 */
-    private suspend fun checkForUpdatesInternal(currentVersion: String): UpdateStatus {
+    private suspend fun checkForUpdatesInternal(currentVersion: String): UpdateStatus =
+        XiaoheiUpdatePolicy.check(
+            commonBaseEnabled = CommonBaseProfile.isEnabled,
+            unavailable = {
+                AppLogger.i(TAG, "Xiaohei profile: upstream update channel disabled")
+                UpdateStatus.Error(context.getString(R.string.xiaohei_updates_unavailable))
+            },
+            fetchUpstream = { checkUpstreamForUpdates(currentVersion) },
+        )
+
+    private suspend fun checkUpstreamForUpdates(currentVersion: String): UpdateStatus {
         return withContext(Dispatchers.IO) {
             try {
                 val betaEnabled = try {

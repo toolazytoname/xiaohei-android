@@ -3,4 +3,5 @@
     <string name="xiaohei_voice_stop_answering">停止回答</string>
     <string name="xiaohei_voice_end_session">结束语音</string>
     <string name="xiaohei_voice_stop_answering_listen_continues">停止回答后仍会继续听</string>
+    <string name="xiaohei_updates_unavailable">小黑测试版暂未开放在线更新；请勿安装上游 Operit 更新包。版本进展见 xiaohei.weichao.studio。</string>
 </resources>
