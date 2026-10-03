@@ -344,6 +344,7 @@ val xiaoheiPublicPreviewJniExcludes =
         "lib/arm64-v8a/libbusybox.so",
         "lib/arm64-v8a/libbash.so",
         "lib/arm64-v8a/liboperit_proot.so",
+        "lib/arm64-v8a/liboperit_loader.so",
         "lib/arm64-v8a/libsudo.so",
         // Common store has no filesystem/grep tool or TensorFlow consumer.
         "lib/arm64-v8a/liboperit_ripgrep.so",

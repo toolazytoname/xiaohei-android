@@ -93,6 +93,7 @@ class XiaoheiPublicPreviewVariantTest {
         assertTrue(jniExcludes.contains("libbash.so"))
         assertTrue(jniExcludes.contains("liboperit_proot.so"))
         assertTrue(jniExcludes.contains("libsudo.so"))
+        assertTrue(jniExcludes.contains("liboperit_loader.so"))
         assertTrue(script.contains("xiaoheiPublicPreviewJniExcludes.forEach"))
 
         val common = buildTypeBody(script, "common")
