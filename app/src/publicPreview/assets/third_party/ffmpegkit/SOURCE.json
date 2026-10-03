@@ -1,0 +1,8 @@
+{
+  "upstream": "https://github.com/arthenica/ffmpeg-kit",
+  "tag": "v6.0",
+  "commit": "d6be56d7aec286eb3c292d6b23ff07a6b70d8693",
+  "archive_sha256": "732c256a0cd137bccb0278a6df75a5babaf783f599ad34862153c40d5d8b682a",
+  "java_files": 32,
+  "changes": "Java sources unmodified; no FFmpeg native libraries distributed in public preview. Native entrypoints disabled by profile gate."
+}

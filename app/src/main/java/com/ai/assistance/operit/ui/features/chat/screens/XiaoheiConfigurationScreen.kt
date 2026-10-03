@@ -63,12 +63,7 @@ fun XiaoheiConfigurationScreen(
 ) {
         var prepExpanded by remember { mutableStateOf(false) }
         var navigationLocked by remember { mutableStateOf(false) }
-        val editionNote =
-                if (BuildConfig.COMMON_STORE) {
-                        STORE_EDITION_NOTE
-                } else {
-                        ENHANCED_EDITION_NOTE
-                }
+        val editionNote = XiaoheiWelcomeContent.editionNote(BuildConfig.COMMON_STORE)
 
         LaunchedEffect(navigationLocked) {
                 if (!navigationLocked) {
@@ -98,7 +93,7 @@ fun XiaoheiConfigurationScreen(
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Text(
-                                text = TITLE,
+                                text = XiaoheiWelcomeContent.TITLE,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -108,7 +103,7 @@ fun XiaoheiConfigurationScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                                text = SUBTITLE,
+                                text = XiaoheiWelcomeContent.SUBTITLE,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -138,7 +133,8 @@ fun XiaoheiConfigurationScreen(
                                         Modifier.fillMaxWidth()
                                                 .heightIn(min = 48.dp)
                                                 .semantics {
-                                                        contentDescription = PRIMARY_ACTION
+                                                        contentDescription =
+                                                                XiaoheiWelcomeContent.PRIMARY_ACTION
                                                 }
                         ) {
                                 if (isSaving) {
@@ -150,7 +146,9 @@ fun XiaoheiConfigurationScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                 }
                                 Text(
-                                        text = if (isSaving) SAVING_LABEL else PRIMARY_ACTION,
+                                        text =
+                                                if (isSaving) XiaoheiWelcomeContent.SAVING_LABEL
+                                                else XiaoheiWelcomeContent.PRIMARY_ACTION,
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Medium
                                 )
@@ -166,7 +164,7 @@ fun XiaoheiConfigurationScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                                text = AFTER_CONFIG_HINT,
+                                text = XiaoheiWelcomeContent.AFTER_CONFIG_HINT,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -186,7 +184,7 @@ private fun XiaoheiConfigurationMark() {
         ) {
                 Image(
                         painter = painterResource(id = R.drawable.ic_launcher_xiaohei_foreground),
-                        contentDescription = LOGO_DESCRIPTION,
+                        contentDescription = XiaoheiWelcomeContent.LOGO_DESCRIPTION,
                         modifier = Modifier.fillMaxSize().padding(10.dp),
                         contentScale = ContentScale.Fit
                 )
@@ -208,20 +206,33 @@ private fun PrepHelpCard(expanded: Boolean, onToggle: () -> Unit) {
                                 modifier =
                                         Modifier.fillMaxWidth()
                                                 .heightIn(min = 48.dp)
-                                                .clickable(onClickLabel = if (expanded) COLLAPSE_LABEL else EXPAND_LABEL) {
+                                                .clickable(
+                                                        onClickLabel =
+                                                                if (expanded)
+                                                                        XiaoheiWelcomeContent
+                                                                                .COLLAPSE_LABEL
+                                                                else
+                                                                        XiaoheiWelcomeContent
+                                                                                .EXPAND_LABEL
+                                                ) {
                                                         onToggle()
                                                 }
                                                 .padding(horizontal = 16.dp)
                                                 .semantics(mergeDescendants = true) {
-                                                        contentDescription = PREP_TITLE
+                                                        contentDescription =
+                                                                XiaoheiWelcomeContent.PREP_TITLE
                                                         stateDescription =
-                                                                if (expanded) EXPANDED_STATE
-                                                                else COLLAPSED_STATE
+                                                                if (expanded)
+                                                                        XiaoheiWelcomeContent
+                                                                                .EXPANDED_STATE
+                                                                else
+                                                                        XiaoheiWelcomeContent
+                                                                                .COLLAPSED_STATE
                                                 },
                                 verticalAlignment = Alignment.CenterVertically
                         ) {
                                 Text(
-                                        text = PREP_TITLE,
+                                        text = XiaoheiWelcomeContent.PREP_TITLE,
                                         modifier = Modifier.weight(1f),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Medium,
@@ -247,17 +258,17 @@ private fun PrepHelpCard(expanded: Boolean, onToggle: () -> Unit) {
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                         Text(
-                                                text = PREP_ITEM_ENDPOINT,
+                                                text = XiaoheiWelcomeContent.PREP_ITEM_ENDPOINT,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                                text = PREP_ITEM_MODEL,
+                                                text = XiaoheiWelcomeContent.PREP_ITEM_MODEL,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                                text = PREP_ITEM_KEY,
+                                                text = XiaoheiWelcomeContent.PREP_ITEM_KEY,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -267,21 +278,4 @@ private fun PrepHelpCard(expanded: Boolean, onToggle: () -> Unit) {
         }
 }
 
-private const val TITLE = "让小黑连接你的模型"
-private const val SUBTITLE = "支持 GLM 等兼容接口。使用你自己的服务地址、模型和密钥。"
-private const val STORE_EDITION_NOTE = "普通版不需要 Root；手机操作会先向你确认。模型服务由你自行选择。"
-private const val ENHANCED_EDITION_NOTE =
-        "增强版供自用侧载；系统助手与 DSP 等增强能力仍在测试，需要单独授权。"
-private const val PRIMARY_ACTION = "配置模型服务"
-private const val SAVING_LABEL = "请稍候"
-private const val PREP_TITLE = "需要准备什么？"
-private const val PREP_ITEM_ENDPOINT = "1. 服务地址：填写你自己的兼容接口地址，在下一页完成。"
-private const val PREP_ITEM_MODEL = "2. 模型名称：由你指定，例如 GLM 或其他兼容模型。"
-private const val PREP_ITEM_KEY = "3. 密钥：在下一页输入。本页不收集、不保存密钥。"
-private const val AFTER_CONFIG_HINT = "配置后可先发文字检查，再自行开启语音。可随时停止。"
-private const val LOGO_DESCRIPTION = "小黑角色图标"
-private const val EXPAND_LABEL = "展开准备说明"
-private const val COLLAPSE_LABEL = "收起准备说明"
-private const val EXPANDED_STATE = "已展开"
-private const val COLLAPSED_STATE = "已收起"
 private const val NAVIGATION_LOCK_MS = 800L

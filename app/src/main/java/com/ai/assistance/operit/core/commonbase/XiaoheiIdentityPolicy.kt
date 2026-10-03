@@ -13,7 +13,8 @@ object XiaoheiIdentityPolicy {
     const val COMMON_BASE_DEFAULT_CHARACTER_NAME = "小黑"
     const val KNOWN_UPSTREAM_DEFAULT_AVATAR_URI = "file:///android_asset/operit.png"
 
-    // Packaged only in the common/commonRelease asset overlay.
+    // Packaged in the common overlay used by common, commonRelease, and
+    // commonEnhancedRelease.
     const val brandedDefaultAvatarUri = "file:///android_asset/xiaohei.png"
 
     fun hasConflictingCardName(otherCardNames: List<String>): Boolean =

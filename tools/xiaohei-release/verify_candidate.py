@@ -25,6 +25,20 @@ STORE_FORBIDDEN_PERMISSIONS = {
     'moe.shizuku.manager.permission.API_V23',
 }
 
+PROFILES = ('store', 'enhanced', 'enhanced_release')
+
+
+def requires_non_debuggable(profile: str) -> bool:
+    return profile in ('store', 'enhanced_release')
+
+
+def uses_16kb_zipalign(profile: str) -> bool:
+    return profile == 'store'
+
+
+def requires_store_native_trim(profile: str) -> bool:
+    return profile == 'store'
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open('rb') as f:
@@ -188,7 +202,7 @@ def verify(apk: Path, aab: Path | None, sdk: Path, profile: str) -> dict:
     info = parse_badging(run([str(sdk / 'aapt'), 'dump', 'badging', str(apk)]))
     manifest = run([str(sdk / 'aapt'), 'dump', 'xmltree', str(apk), 'AndroidManifest.xml'])
     signature = run([str(sdk / 'apksigner'), 'verify', '--verbose', str(apk)])
-    run([str(sdk / 'zipalign'), '-c', '-P', '16' if profile == 'store' else '4', '4', str(apk)])
+    run([str(sdk / 'zipalign'), '-c', '-P', '16' if uses_16kb_zipalign(profile) else '4', '4', str(apk)])
     expected = 'studio.weichao.xiaohei' if profile == 'store' else 'studio.weichao.xiaohei.common'
     expected_label = '小黑' if profile == 'store' else '小黑·增强'
     checks = {'package': info['package'] == expected, 'label': info['label'] == expected_label,
@@ -207,6 +221,13 @@ def verify(apk: Path, aab: Path | None, sdk: Path, profile: str) -> dict:
                        'forbidden_permissions_absent': not (set(info['permissions']) & STORE_FORBIDDEN_PERMISSIONS),
                        'signature_v2': bool(re.search(r'v2 scheme.*: true', signature)),
                        'signature_v3': bool(re.search(r'v3 scheme.*: true', signature))})
+    if profile == 'enhanced_release':
+        checks.update({
+            'non_debuggable': not info['debuggable'],
+            'forbidden_permissions_absent': not (set(info['permissions']) & STORE_FORBIDDEN_PERMISSIONS),
+            'signature_v2': bool(re.search(r'v2 scheme.*: true', signature)),
+            'signature_v3': bool(re.search(r'v3 scheme.*: true', signature)),
+        })
     b = inspect_archive(aab, True) if aab else None
     if b:
         checks['apk_aab_native_identical'] = a['native'] == b['native'] and a['non_elf_library_members'] == b['non_elf_library_members']
@@ -226,7 +247,7 @@ def main() -> int:
     p.add_argument('--apk', type=Path, required=True)
     p.add_argument('--aab', type=Path)
     p.add_argument('--build-tools', type=Path, required=True)
-    p.add_argument('--profile', choices=['store', 'enhanced'], required=True)
+    p.add_argument('--profile', choices=list(PROFILES), required=True)
     p.add_argument('--out', type=Path, required=True)
     a = p.parse_args()
     try:

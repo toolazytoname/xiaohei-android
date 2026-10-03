@@ -4,7 +4,10 @@ import com.ai.assistance.operit.BuildConfig
 
 /**
  * Compile-time common-base profile. Original debug/release keep [BuildConfig.COMMON_BASE] false.
- * [storeNativeTrim] is only true for commonRelease; common(debug) keeps native tools packaged.
+ * [storeNativeTrim] is true when COMMON_STORE or COMMON_PUBLIC_PREVIEW is set.
+ * common(debug) keeps native tools packaged. Both public preview variants trim the
+ * same FFmpeg / OCR / terminal JNI set. That trim is not COMMON_STORE: enhanced
+ * device tools stay on [enhancedDevice].
  *
  * Both store and enhanced sideload keep [isEnabled] true. Enhanced device tools are a separate
  * flag: [enhancedDevice] is true only for the legal combination COMMON_BASE && COMMON_ENHANCED &&
@@ -15,7 +18,11 @@ object CommonBaseProfile {
         get() = BuildConfig.COMMON_BASE
 
     val storeNativeTrim: Boolean
-        get() = BuildConfig.COMMON_STORE
+        get() =
+            resolveStoreNativeTrim(
+                commonStore = BuildConfig.COMMON_STORE,
+                commonPublicPreview = BuildConfig.COMMON_PUBLIC_PREVIEW
+            )
 
     val enhancedDevice: Boolean
         get() =
@@ -24,6 +31,13 @@ object CommonBaseProfile {
                 commonStore = BuildConfig.COMMON_STORE,
                 commonEnhanced = BuildConfig.COMMON_ENHANCED
             )
+
+    fun resolveStoreNativeTrim(
+        commonStore: Boolean,
+        commonPublicPreview: Boolean
+    ): Boolean {
+        return commonStore || commonPublicPreview
+    }
 
     fun resolveEnhancedDevice(
         commonBase: Boolean,

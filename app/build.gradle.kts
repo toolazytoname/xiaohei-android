@@ -34,8 +34,8 @@ plugins {
 }
 
 // Must match CommonBaseAssetPolicy.excludedPackagedRelativePaths. Applied only to the
-// common and commonRelease buildTypes via SingleArtifact.ASSETS transform
-// (merged assets, including :terminal).
+// common, commonRelease, and commonEnhancedRelease buildTypes via SingleArtifact.ASSETS
+// transform (merged assets, including :terminal).
 val commonBaseExcludedPackagedAssets =
     linkedSetOf(
         "accessibility.apk",
@@ -315,6 +315,80 @@ val sttModelAssetsManifestFile = layout.projectDirectory.file("config/stt-model-
 val generatedSttModelAssetsDir = layout.buildDirectory.dir("generated/stt-model-assets")
 val generatedMainAssetsDir = layout.buildDirectory.dir("generated/main-assets")
 
+// common debug remains an engineering APK. Public preview enhanced release is a
+// separate non-debug type with the same overlay, package id, and brand.
+val xiaoheiCommonOverlayBuildTypes =
+    listOf("common", "commonRelease", "commonEnhancedRelease")
+val xiaoheiPublicPreviewBuildTypes =
+    listOf("commonRelease", "commonEnhancedRelease")
+val xiaoheiNonPublicFfmpegAarBuildTypes =
+    listOf("debug", "release", "common", "clone", "nightly")
+val xiaoheiPublicPreviewVersionCode = 47
+val xiaoheiPublicPreviewVersionName = "1.0.0-preview.1"
+val xiaoheiPublicPreviewJniExcludes =
+    listOf(
+        "lib/arm64-v8a/libavcodec.so",
+        "lib/arm64-v8a/libavdevice.so",
+        "lib/arm64-v8a/libavfilter.so",
+        "lib/arm64-v8a/libavformat.so",
+        "lib/arm64-v8a/libavutil.so",
+        "lib/arm64-v8a/libffmpegkit.so",
+        "lib/arm64-v8a/libffmpegkit_abidetect.so",
+        "lib/arm64-v8a/libswresample.so",
+        "lib/arm64-v8a/libswscale.so",
+        "lib/arm64-v8a/libc++_shared.so",
+        "lib/arm64-v8a/libmediapipe_tasks_text_jni.so",
+        "lib/arm64-v8a/libmlkit_google_ocr_pipeline.so",
+        // Terminal JNI stays in the private common debug APK. Public preview
+        // packages do not ship a terminal environment.
+        "lib/arm64-v8a/libbusybox.so",
+        "lib/arm64-v8a/libbash.so",
+        "lib/arm64-v8a/liboperit_proot.so",
+        "lib/arm64-v8a/libsudo.so",
+        // Common store has no filesystem/grep tool or TensorFlow consumer.
+        "lib/arm64-v8a/liboperit_ripgrep.so",
+        "lib/arm64-v8a/libtensorflowlite_jni.so",
+        // Store STT is sherpa-ncnn. sherpa-mnn JNI is unreachable (factory
+        // has no SHERPA_MNN; prefs remap it to NCNN) and is not packaged.
+        "lib/arm64-v8a/libsherpa-mnn-jni.so",
+    )
+
+fun com.android.build.api.dsl.ApplicationBuildType.applyXiaoheiEnhancedBrand() {
+    applicationIdSuffix = ".common"
+    buildConfigField("boolean", "COMMON_BASE", "true")
+    buildConfigField("boolean", "COMMON_ENHANCED", "true")
+    buildConfigField("boolean", "COMMON_STORE", "false")
+    manifestPlaceholders["xiaoheiDspPermission"] =
+        "io.github.toolazytoname.xiaohei.permission.WAKEWORD_EVENT"
+    manifestPlaceholders["xiaoheiDspCompanionPackage"] = "io.github.toolazytoname.xiaohei.dsp"
+    manifestPlaceholders["xiaoheiCleartextAllowed"] = "true"
+    manifestPlaceholders["xiaoheiAppLabel"] = "小黑·增强"
+    manifestPlaceholders["xiaoheiLauncherIcon"] = "@mipmap/ic_launcher_xiaohei_enhanced"
+    manifestPlaceholders["xiaoheiLauncherRoundIcon"] = "@mipmap/ic_launcher_xiaohei_enhanced_round"
+    resValue("string", "app_name", "小黑·增强")
+}
+
+fun com.android.build.api.dsl.AndroidSourceSet.useXiaoheiCommonOverlay() {
+    manifest.srcFile("src/common/AndroidManifest.xml")
+    java.srcDir("src/common/java")
+    kotlin.srcDir("src/common/java")
+    kotlin.srcDir("src/common/kotlin")
+    res.srcDir("src/common/res")
+    assets.srcDir("src/common/assets")
+    resources.srcDir("src/common/resources")
+    aidl.srcDir("src/common/aidl")
+    renderscript.srcDir("src/common/rs")
+    jniLibs.srcDir("src/common/jniLibs")
+    shaders.srcDir("src/common/shaders")
+}
+
+fun com.android.build.api.dsl.AndroidSourceSet.useXiaoheiPublicPreviewJava() {
+    // Official FFmpegKit v6.0 Java only. Do not add this to common debug:
+    // that variant still consumes ffmpeg-kit-local.aar.
+    java.srcDir("src/publicPreview/java")
+    assets.srcDir("src/publicPreview/assets")
+}
+
 val syncSttModelAssets by tasks.registering {
     description = "Downloads and verifies generated assets for local STT recognition."
     group = "build setup"
@@ -464,6 +538,7 @@ android {
         buildConfigField("boolean", "COMMON_BASE", "false")
         buildConfigField("boolean", "COMMON_STORE", "false")
         buildConfigField("boolean", "COMMON_ENHANCED", "false")
+        buildConfigField("boolean", "COMMON_PUBLIC_PREVIEW", "false")
     }
 
     buildTypes {
@@ -496,21 +571,10 @@ android {
         }
         create("common") {
             initWith(getByName("debug"))
-            // Enhanced side-load variant keeps its own id so it can co-exist
-            // with the store build (studio.weichao.xiaohei) on one device.
-            applicationIdSuffix = ".common"
+            // Engineering enhanced APK. Keep debug signing so existing installs
+            // continue to update. Public preview uses commonEnhancedRelease.
             matchingFallbacks += listOf("debug")
-            buildConfigField("boolean", "COMMON_BASE", "true")
-            buildConfigField("boolean", "COMMON_ENHANCED", "true")
-            manifestPlaceholders["xiaoheiDspPermission"] = "io.github.toolazytoname.xiaohei.permission.WAKEWORD_EVENT"
-            manifestPlaceholders["xiaoheiDspCompanionPackage"] = "io.github.toolazytoname.xiaohei.dsp"
-            manifestPlaceholders["xiaoheiCleartextAllowed"] = "true"
-            // Shared common overlay cannot override launcher mipmap by name;
-            // placeholders pick the badged icon only for this enhanced id.
-            manifestPlaceholders["xiaoheiAppLabel"] = "小黑·增强"
-            manifestPlaceholders["xiaoheiLauncherIcon"] = "@mipmap/ic_launcher_xiaohei_enhanced"
-            manifestPlaceholders["xiaoheiLauncherRoundIcon"] = "@mipmap/ic_launcher_xiaohei_enhanced_round"
-            resValue("string", "app_name", "小黑·增强")
+            applyXiaoheiEnhancedBrand()
             // Large unused assets are dropped after merge by the common-base
             // SingleArtifact.ASSETS transform. Do not exclude them from sourceSets.main
             // or generatedMainAssetsDir (those inputs are shared with other buildTypes).
@@ -530,11 +594,25 @@ android {
             manifestPlaceholders["xiaoheiLauncherIcon"] = "@mipmap/ic_launcher_simple"
             manifestPlaceholders["xiaoheiLauncherRoundIcon"] = "@mipmap/ic_launcher_simple_round"
             buildConfigField("boolean", "COMMON_ENHANCED", "false")
+            buildConfigField("boolean", "COMMON_PUBLIC_PREVIEW", "true")
             resValue("string", "app_name", "小黑")
             // Same keystore as release, but v2+v3 only. Do not use APK rotation signing.
             // If that config is absent, leave unsigned. Never assign debug signing.
             signingConfig = signingConfigs.findByName("commonStore")
             // Same six-asset trim as common, wired below via SingleArtifact.ASSETS.
+        }
+        create("commonEnhancedRelease") {
+            initWith(getByName("release"))
+            // Same package id and brand as common, official commonStore signing.
+            // matchingFallbacks must be release so library modules that only
+            // publish debug/release resolve. Never inherit debug signing.
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+            applyXiaoheiEnhancedBrand()
+            // Public preview trim is independent of COMMON_STORE so enhancedDevice stays open.
+            buildConfigField("boolean", "COMMON_PUBLIC_PREVIEW", "true")
+            // If commonStore is absent, leave unsigned. Never assign debug signing.
+            signingConfig = signingConfigs.findByName("commonStore")
         }
         create("nightly") {
             isMinifyEnabled = false
@@ -551,6 +629,13 @@ android {
         }
     }
     applicationVariants.all {
+        if (buildType.name in xiaoheiPublicPreviewBuildTypes) {
+            outputs.all {
+                val apkOutput = this as com.android.build.gradle.api.ApkVariantOutput
+                apkOutput.versionCodeOverride = xiaoheiPublicPreviewVersionCode
+                apkOutput.versionNameOverride = xiaoheiPublicPreviewVersionName
+            }
+        }
         if (buildType.name == "nightly") {
             outputs.all {
                 val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
@@ -575,22 +660,22 @@ android {
                 output.outputFileName = "app-common-release.apk"
             }
         }
+        if (buildType.name == "commonEnhancedRelease") {
+            outputs.all {
+                val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+                output.outputFileName = "app-common-enhanced-release.apk"
+            }
+        }
     }
     sourceSets {
+        // common maps src/common by AGP convention. Non-debug types need an explicit overlay.
         getByName("commonRelease") {
-            // Share the common-base overlay tree with the debug common buildType.
-            // Another worker owns src/common Manifest / backup XML contents.
-            manifest.srcFile("src/common/AndroidManifest.xml")
-            java.srcDir("src/common/java")
-            kotlin.srcDir("src/common/java")
-            kotlin.srcDir("src/common/kotlin")
-            res.srcDir("src/common/res")
-            assets.srcDir("src/common/assets")
-            resources.srcDir("src/common/resources")
-            aidl.srcDir("src/common/aidl")
-            renderscript.srcDir("src/common/rs")
-            jniLibs.srcDir("src/common/jniLibs")
-            shaders.srcDir("src/common/shaders")
+            useXiaoheiCommonOverlay()
+            useXiaoheiPublicPreviewJava()
+        }
+        getByName("commonEnhancedRelease") {
+            useXiaoheiCommonOverlay()
+            useXiaoheiPublicPreviewJava()
         }
     }
     compileOptions {
@@ -677,7 +762,7 @@ abstract class FilterCommonPackagedAssetsTask : DefaultTask() {
 }
 
 androidComponents {
-    listOf("common", "commonRelease").forEach { buildTypeName ->
+    xiaoheiCommonOverlayBuildTypes.forEach { buildTypeName ->
         onVariants(selector().withBuildType(buildTypeName)) { variant ->
             val capitalizedName =
                 variant.name.replaceFirstChar { ch ->
@@ -699,30 +784,11 @@ androidComponents {
                 .toTransform(SingleArtifact.ASSETS)
         }
     }
-    onVariants(selector().withBuildType("commonRelease")) { variant ->
-        listOf(
-            "lib/arm64-v8a/libavcodec.so",
-            "lib/arm64-v8a/libavdevice.so",
-            "lib/arm64-v8a/libavfilter.so",
-            "lib/arm64-v8a/libavformat.so",
-            "lib/arm64-v8a/libavutil.so",
-            "lib/arm64-v8a/libffmpegkit.so",
-            "lib/arm64-v8a/libffmpegkit_abidetect.so",
-            "lib/arm64-v8a/libswresample.so",
-            "lib/arm64-v8a/libswscale.so",
-            "lib/arm64-v8a/libc++_shared.so",
-            "lib/arm64-v8a/libmediapipe_tasks_text_jni.so",
-            "lib/arm64-v8a/libmlkit_google_ocr_pipeline.so",
-            // Unused terminal script disguised as a shared library is not a store capability.
-            "lib/arm64-v8a/libsudo.so",
-            // Common store has no filesystem/grep tool or TensorFlow consumer.
-            "lib/arm64-v8a/liboperit_ripgrep.so",
-            "lib/arm64-v8a/libtensorflowlite_jni.so",
-            // Store STT is sherpa-ncnn. sherpa-mnn JNI is unreachable (factory
-            // has no SHERPA_MNN; prefs remap it to NCNN) and is not packaged.
-            "lib/arm64-v8a/libsherpa-mnn-jni.so",
-        ).forEach { path ->
-            variant.packaging.jniLibs.excludes.add(path)
+    xiaoheiPublicPreviewBuildTypes.forEach { buildTypeName ->
+        onVariants(selector().withBuildType(buildTypeName)) { variant ->
+            xiaoheiPublicPreviewJniExcludes.forEach { path ->
+                variant.packaging.jniLibs.excludes.add(path)
+            }
         }
     }
 }
@@ -755,8 +821,9 @@ val signRotatedNightlyApk by tasks.registering {
     }
 }
 
-// Exact names only. Do not broaden to assembleCommonRelease; that variant must
-// not run Operit nightly/release APK rotation signing.
+// Exact names only. Do not broaden to assembleCommonRelease or
+// assembleCommonEnhancedRelease; those variants must not run Operit
+// nightly/release APK rotation signing.
 tasks.matching { it.name == "assembleRelease" }.configureEach {
     finalizedBy(signRotatedReleaseApk)
 }
@@ -767,6 +834,16 @@ tasks.matching { it.name == "assembleNightly" }.configureEach {
 
 tasks.named("preBuild") {
     dependsOn(syncMainAssets)
+}
+
+val xiaoheiPublicPreviewPreBuildPrefixes =
+    listOf("preCommonRelease", "preCommonEnhancedRelease")
+tasks.matching { task ->
+    task.name.startsWith("pre") &&
+        task.name.endsWith("Build") &&
+        task.name != "preBuild" &&
+        xiaoheiPublicPreviewPreBuildPrefixes.none { prefix -> task.name.startsWith(prefix) }
+}.configureEach {
     dependsOn(verifyExternallyBuiltNativeLibraries)
 }
 
@@ -815,8 +892,12 @@ dependencies {
         exclude(group = "androidx.graphics", module = "graphics-path")
     }
     implementation(files("libs/graphics-path-1.0.1-16kb-arm64.aar"))
-    // The only vendored artifact is the custom FFmpegKit AAR.
-    implementation(files("libs/ffmpeg-kit-local.aar"))
+    // Homemade FFmpegKit AAR is for non-public variants only. Public preview
+    // compiles official FFmpegKit Java from src/publicPreview/java and does not
+    // package those natives.
+    xiaoheiNonPublicFfmpegAarBuildTypes.forEach { buildTypeName ->
+        add("${buildTypeName}Implementation", files("libs/ffmpeg-kit-local.aar"))
+    }
     implementation("com.arthenica:smart-exception-common:0.2.1")
     implementation("com.arthenica:smart-exception-java:0.2.1")
     implementation(libs.androidx.runtime.android)

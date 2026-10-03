@@ -1,9 +1,10 @@
 package com.ai.assistance.operit.core.commonbase
 
 /**
- * Common-base packaged-asset exclusions. Source files stay on disk; only the `common`
- * buildType drops these paths from merged [android.content.res.AssetManager] output via
- * a variant-scoped `SingleArtifact.ASSETS` transform.
+ * Common-base packaged-asset exclusions. Source files stay on disk; the `common`,
+ * `commonRelease`, and `commonEnhancedRelease` buildTypes drop these paths from
+ * merged [android.content.res.AssetManager] output via a variant-scoped
+ * `SingleArtifact.ASSETS` transform.
  *
  * Original debug/release/clone/nightly keep every merged asset. Do not exclude from
  * `sourceSets.main` or the shared generated assets directory.

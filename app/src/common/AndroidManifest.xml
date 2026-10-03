@@ -147,9 +147,10 @@
       are required. In-app user export/import is unchanged. See docs/common-backup-policy.md.
     -->
     <!--
-      common and commonRelease share this overlay, so launcher mipmap cannot
-      be a same-name resource override. buildType placeholders select
-      ic_launcher_simple vs ic_launcher_xiaohei_enhanced. Activity names stay.
+      common, commonRelease, and commonEnhancedRelease share this overlay, so
+      launcher mipmap cannot be a same-name resource override. buildType
+      placeholders select ic_launcher_simple vs ic_launcher_xiaohei_enhanced.
+      Activity names stay.
     -->
     <application
         android:allowBackup="false"

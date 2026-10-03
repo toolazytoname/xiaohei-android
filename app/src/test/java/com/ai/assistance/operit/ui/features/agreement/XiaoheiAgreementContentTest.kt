@@ -80,6 +80,18 @@ class XiaoheiAgreementContentTest {
         assertFalse(XiaoheiAgreementContent.isRecordedVersionCurrent("", store))
         assertTrue(XiaoheiAgreementContent.isRecordedVersionCurrent(store, store))
         assertTrue(XiaoheiAgreementContent.isRecordedVersionCurrent(enhanced, enhanced))
+        assertFalse(
+            XiaoheiAgreementContent.isRecordedVersionCurrent(
+                "xiaohei-store-2026-10-02",
+                store
+            )
+        )
+        assertFalse(
+            XiaoheiAgreementContent.isRecordedVersionCurrent(
+                "xiaohei-enhanced-2026-10-02",
+                enhanced
+            )
+        )
     }
 
     @Test
@@ -90,36 +102,50 @@ class XiaoheiAgreementContentTest {
         } catch (error: IllegalStateException) {
             assertTrue(error.message.orEmpty().contains("COMMON_BASE"))
         }
+        try {
+            XiaoheiAgreementContent.policyAssetFor(XiaoheiAgreementContent.Profile.UPSTREAM)
+            throw AssertionError("upstream policy asset must not be produced")
+        } catch (error: IllegalStateException) {
+            assertTrue(error.message.orEmpty().contains("COMMON_BASE"))
+        }
     }
 
     @Test
-    fun storeCopy_isUnpublishedPersonalDraft_notEffectivePolicy() {
+    fun storeCopy_isPublicPreview_notStoreApproval() {
         val copy = XiaoheiAgreementContent.copyFor(commonBase = true, commonStore = true)
         val body = copy.notice + "\n" + copy.title + "\n" + copy.subtitle + "\n" + copy.versionLabel
         assertEquals(XiaoheiAgreementContent.Profile.STORE, copy.profile)
         assertEquals(XiaoheiAgreementContent.STORE_NOTICE_VERSION, copy.version)
         assertEquals(XiaoheiAgreementContent.CONTINUE_LABEL, copy.continueLabel)
         assertEquals("已了解，继续测试", copy.continueLabel)
-        assertTrue(copy.title.contains("商店版"))
-        assertTrue(copy.title.contains("未发布草稿"))
-        assertTrue(copy.subtitle.contains("不是已生效的法律政策"))
-        assertTrue(body.contains("个人运营"))
-        assertTrue(body.contains("未公开发布"))
-        assertTrue(body.contains("待填"))
-        assertTrue(body.contains("不会填写或编造"))
-        assertTrue(body.contains("不是已生效的法律政策"))
-        assertTrue(body.contains("不禁止当前私有调试"))
+        assertEquals(XiaoheiAgreementContent.STORE_POLICY_ASSET, copy.policyAsset)
+        assertTrue(copy.title.contains("普通版"))
+        assertTrue(copy.title.contains("公开预览"))
+        assertTrue(copy.subtitle.contains("不是商店批准"))
+        assertTrue(copy.subtitle.contains("模型需自行配置"))
+        assertTrue(copy.subtitle.contains("语音未完整验收"))
+        assertTrue(body.contains("公开预览"))
+        assertTrue(body.contains("不是商店审核通过"))
+        assertTrue(body.contains("韦超"))
+        assertTrue(body.contains("lazywc@gmail.com"))
+        assertTrue(body.contains("2026-10-03"))
+        assertTrue(body.contains("明文"))
         assertTrue(body.contains("不发起网络请求"))
         assertTrue(body.contains("studio.weichao.xiaohei"))
+        assertTrue(copy.documentHeading.contains("普通版"))
+        assertFalse(copy.documentHeading.contains("增强版"))
         assertFalse(copy.continueLabel.contains("同意"))
         assertFalse(body.contains("我已阅读并同意"))
+        assertFalse(body.contains("待填"))
+        assertFalse(body.contains("未发布草稿"))
+        assertFalse(body.contains("不禁止当前私有调试"))
         assertAttribution(body)
-        assertNoFabricatedContacts(body)
+        assertOnlyConfirmedPublicEmail(body)
         assertOperitIsNotOperator(body)
     }
 
     @Test
-    fun enhancedCopy_isSideloadOnly_andStoreDraftDoesNotApply() {
+    fun enhancedCopy_bindsEnhancedPolicy_notStorePolicy() {
         val copy = XiaoheiAgreementContent.copyFor(commonBase = true, commonStore = false)
         val body =
             copy.notice +
@@ -132,51 +158,100 @@ class XiaoheiAgreementContentTest {
         assertEquals(XiaoheiAgreementContent.Profile.ENHANCED, copy.profile)
         assertEquals(XiaoheiAgreementContent.ENHANCED_NOTICE_VERSION, copy.version)
         assertEquals("已了解，继续测试", copy.continueLabel)
+        assertEquals(XiaoheiAgreementContent.ENHANCED_POLICY_ASSET, copy.policyAsset)
+        assertNotEquals(XiaoheiAgreementContent.STORE_POLICY_ASSET, copy.policyAsset)
         assertTrue(copy.title.contains("增强版"))
-        assertTrue(copy.title.contains("自用侧载"))
-        assertTrue(body.contains("仅供自用侧载"))
+        assertTrue(copy.title.contains("公开预览"))
+        assertTrue(copy.subtitle.contains("OnePlus 8T"))
+        assertTrue(copy.subtitle.contains("模型需自行配置"))
+        assertTrue(copy.subtitle.contains("语音与 DSP 未完整验收"))
         assertTrue(body.contains("不是商店产品"))
         assertTrue(body.contains("系统默认助手"))
         assertTrue(body.contains("DSP"))
         assertTrue(body.contains("明确授权"))
-        assertTrue(body.contains("经过实测"))
-        assertTrue(copy.documentHeading.contains("仅商店适用"))
-        assertTrue(body.contains("只适用于商店版"))
-        assertTrue(body.contains("不适用于本增强包"))
+        assertTrue(body.contains("明文 HTTP"))
+        assertTrue(copy.documentHeading.contains("增强版"))
+        assertFalse(copy.documentHeading.contains("普通版"))
+        assertFalse(copy.documentHeading.contains("仅商店适用"))
+        assertTrue(body.contains("不把普通版政策冒充"))
         assertTrue(body.contains("studio.weichao.xiaohei.common"))
-        assertTrue(body.contains("待填"))
-        assertTrue(body.contains("不是已生效的法律政策"))
+        assertTrue(body.contains("韦超"))
+        assertFalse(body.contains("待填"))
         assertFalse(copy.continueLabel.contains("同意"))
         assertAttribution(body)
-        assertNoFabricatedContacts(body)
+        assertOnlyConfirmedPublicEmail(body)
         assertOperitIsNotOperator(body)
     }
 
     @Test
-    fun bundledPolicyAsset_isCompleteUnpublishedDraft() {
+    fun bundledStorePolicy_isCompletePublicPreviewWithoutPlaceholders() {
         assertEquals(
             "xiaohei-privacy-policy.zh-CN.md",
             XiaoheiAgreementContent.BUNDLED_POLICY_ASSET
         )
-        val document = readBundledPolicy()
-        assertTrue(document.contains("# 隐私政策（定稿待填）"))
-        assertTrue(document.contains("【待填：个人运营者姓名】"))
-        assertTrue(document.contains("【待填：公开联系邮箱】"))
-        assertTrue(document.contains("【待填：生效日期】"))
+        val document = readBundledPolicy(XiaoheiAgreementContent.STORE_POLICY_ASSET)
+        assertTrue(document.contains("# 小黑普通版隐私政策（公开预览）"))
+        assertTrue(document.contains("韦超"))
+        assertTrue(document.contains("lazywc@gmail.com"))
+        assertTrue(document.contains("2026-10-03"))
         assertTrue(document.contains("运营主体类型：个人"))
         assertTrue(document.contains("studio.weichao.xiaohei"))
         assertTrue(document.contains("studio.weichao.xiaohei.common"))
-        assertTrue(document.contains("仅供自用侧载"))
-        assertTrue(document.contains("本政策只适用于商店版"))
+        assertTrue(document.contains("本文件不适用于增强版"))
         assertTrue(document.contains("Operit v1.12.1"))
         assertTrue(document.contains("LGPL-3.0-only"))
-        // Verify all sections, not an arbitrary character count (UTF-8 bytes != chars).
+        assertTrue(document.contains("不是小黑的运营者"))
+        assertTrue(document.contains("按明文写入"))
+        assertTrue(document.contains("没有另行加密"))
+        assertTrue(document.contains("填写 `http://` 地址会被网络安全配置拒绝"))
+        assertTrue(document.contains("改选云端 STT"))
+        assertTrue(document.contains("系统 TTS"))
+        assertTrue(document.contains("16KB 真机运行仍未完整验收") || document.contains("16KB 真机运行未验收") || document.contains("16KB 页面对齐的静态打包门禁不等于 16KB 真机已验收"))
+        assertFalse(document.contains("待填"))
+        assertFalse(document.contains("【待填"))
+        assertFalse(document.contains("定稿待填"))
+        assertFalse(document.contains("2026-09-19"))
+        assertFalse(document.contains("计划排除"))
+        assertFalse(document.contains("已加密"))
+        assertFalse(document.contains("密钥加密"))
+        assertFalse(document.contains("我已阅读并同意"))
+        assertFalse(document.contains("本政策只适用于商店版"))
         val sections = Regex("^## (\\d+)\\.", RegexOption.MULTILINE)
             .findAll(document).map { it.groupValues[1].toInt() }.toList()
         assertEquals((1..11).toList(), sections)
-        assertFalse(document.contains("我已阅读并同意"))
-        assertNoFabricatedContacts(document)
+        assertOnlyConfirmedPublicEmail(document)
         assertOperitIsNotOperator(document)
+    }
+
+    @Test
+    fun bundledEnhancedPolicy_isDistinctAndHasEnhancedBoundaries() {
+        val store = readBundledPolicy(XiaoheiAgreementContent.STORE_POLICY_ASSET)
+        val enhanced = readBundledPolicy(XiaoheiAgreementContent.ENHANCED_POLICY_ASSET)
+        assertNotEquals(store, enhanced)
+        assertTrue(enhanced.contains("# 小黑增强版隐私政策（公开预览）"))
+        assertTrue(enhanced.contains("studio.weichao.xiaohei.common"))
+        assertTrue(enhanced.contains("commonEnhancedRelease"))
+        assertTrue(enhanced.contains("仅建议在 OnePlus 8T 上实验"))
+        assertTrue(enhanced.contains("韦超"))
+        assertTrue(enhanced.contains("lazywc@gmail.com"))
+        assertTrue(enhanced.contains("按明文写入"))
+        assertTrue(enhanced.contains("usesCleartextTraffic` 为 true") || enhanced.contains("`usesCleartextTraffic` 为 true"))
+        assertTrue(enhanced.contains("用户安装的证书"))
+        assertTrue(enhanced.contains("get_device_status"))
+        assertTrue(enhanced.contains("set_media_volume"))
+        assertTrue(enhanced.contains("DSP"))
+        assertTrue(enhanced.contains("普通版政策不适用于本增强包"))
+        assertFalse(enhanced.contains("待填"))
+        assertFalse(enhanced.contains("本政策只适用于商店版"))
+        assertFalse(enhanced.contains("填写 `http://` 地址会被网络安全配置拒绝"))
+        assertFalse(enhanced.contains("已加密"))
+        assertFalse(enhanced.contains("我已阅读并同意"))
+        val sections = Regex("^## (\\d+)\\.", RegexOption.MULTILINE)
+            .findAll(enhanced).map { it.groupValues[1].toInt() }.toList()
+        assertEquals((1..11).toList(), sections)
+        assertOnlyConfirmedPublicEmail(enhanced)
+        assertOperitIsNotOperator(enhanced)
+        assertAttribution(enhanced)
     }
 
     private fun assertAttribution(text: String) {
@@ -193,19 +268,24 @@ class XiaoheiAgreementContentTest {
         }
     }
 
-    private fun assertNoFabricatedContacts(text: String) {
-        assertFalse(Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}").containsMatchIn(text))
+    private fun assertOnlyConfirmedPublicEmail(text: String) {
+        val emails =
+            Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
+                .findAll(text)
+                .map { it.value }
+                .toSet()
+        assertEquals(setOf(XiaoheiAgreementContent.OPERATOR_EMAIL), emails)
         assertFalse(text.contains("weichao@"))
         assertFalse(text.contains("example.com"))
         assertFalse(text.contains("张三"))
         assertFalse(text.contains("李四"))
     }
 
-    private fun readBundledPolicy(): String {
+    private fun readBundledPolicy(assetName: String): String {
         val candidates =
             listOf(
-                File("src/common/assets/xiaohei-privacy-policy.zh-CN.md"),
-                File("app/src/common/assets/xiaohei-privacy-policy.zh-CN.md")
+                File("src/common/assets/$assetName"),
+                File("app/src/common/assets/$assetName")
             )
         val file = candidates.firstOrNull { it.isFile }
         assertTrue("bundled policy asset must exist for tests: $candidates", file != null)

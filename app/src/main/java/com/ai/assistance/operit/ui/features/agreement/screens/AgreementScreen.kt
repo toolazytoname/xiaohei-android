@@ -40,12 +40,13 @@ private fun XiaoheiAgreementScreen(onContinue: () -> Unit) {
                         commonStore = BuildConfig.COMMON_STORE
                 )
         val context = LocalContext.current
-        // COMMON_BASE packages the draft in src/common/assets. Missing file is a packaging
-        // error; do not substitute the Operit 2026-07-15 agreement.
+        // COMMON_BASE packages preview policies in src/common/assets. Store and
+        // enhanced each load their own file. Missing file is a packaging error;
+        // do not substitute the Operit 2026-07-15 agreement or the other edition.
         val bundledDocument =
-                remember(context) {
+                remember(context, copy.policyAsset) {
                         context.assets
-                                .open(XiaoheiAgreementContent.BUNDLED_POLICY_ASSET)
+                                .open(copy.policyAsset)
                                 .bufferedReader(StandardCharsets.UTF_8)
                                 .use { it.readText() }
                 }

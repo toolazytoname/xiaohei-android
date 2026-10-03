@@ -6,17 +6,18 @@
 
 | 构建 / 桌面名称 | 包名 | 边界 |
 |---|---|---|
-| `commonRelease` / **小黑** | `studio.weichao.xiaohei` | 普通安卓基础助手；默认不需要Root，不默认自主跨App无障碍操作 |
-| `common` / **小黑·增强（+徽记）** | `studio.weichao.xiaohei.common` | 增强自用侧载/可调试；OnePlus系统助手/DSP独立验收 |
+| `commonRelease` / **小黑** | `studio.weichao.xiaohei` | 普通安卓基础助手公开预览；默认不需要Root，不默认自主跨App无障碍操作 |
+| `commonEnhancedRelease` / **小黑·增强（+徽记）** | `studio.weichao.xiaohei.common` | 正式签名公开预览；仅建议 OnePlus 8T 实验 |
+| `common` / **小黑·增强（+徽记）** | `studio.weichao.xiaohei.common` | 工程调试包，debug 签名；与正式签名预览不能覆盖安装 |
 
 两包可并存，不覆盖官方Operit或历史共同版。模型接口由用户自行配置；源码、官网、报告不包含个人端点和密钥。
 
-## 当前状态（2026-10-02，本地工作日）
+## 当前状态（2026-10-03）
 
-- 已构建两版；新版首启说明的两个变体宿主测试各509项通过（同一套场景，不能加总成1018个独立场景）。
-- OnePlus8T/Android14/4KB设备上，两版用户自配GLM接口的连接与最小文字回复已观察；商店版会话重启读取、增强版覆盖更新后配置保留已观察。不是语音/DSP/升级/16KB运行通过。
-- 首启运营说明仍为**未发布测试草稿**。个人运营者姓名、公开联系邮箱、生效日期与正式隐私政策待补。
-- 没有商店正式发布，没有声称持续语音、自然插话、息屏DSP、全机型或全部许可证履行已经通过。
+- 公开预览政策已写入普通/增强两份捆绑文本：运营者韦超，公开邮箱 lazywc@gmail.com，生效 2026-10-03。这是预览政策，不是商店批准。
+- 增强正式签名变体为 `commonEnhancedRelease`；`common` 仍是 debug 工程包，签名未改，以免破坏旧安装。
+- 没有商店正式发布，没有声称持续语音、自然插话、息屏DSP、16KB运行或全部许可证履行已经通过。
+- 预览说明见 `docs/xiaohei-public-preview.md`。
 
 ## 构建依赖与已知缺口
 

@@ -108,6 +108,24 @@ class BadgingTests(unittest.TestCase):
     def test_missing_metadata(self):
         with self.assertRaises(ValueError): v.parse_badging('')
 
+
+class ProfileGateTests(unittest.TestCase):
+    def test_store_keeps_16kb_and_non_debug_gates(self):
+        self.assertEqual(v.PROFILES, ('store', 'enhanced', 'enhanced_release'))
+        self.assertTrue(v.uses_16kb_zipalign('store'))
+        self.assertTrue(v.requires_non_debuggable('store'))
+        self.assertTrue(v.requires_store_native_trim('store'))
+
+    def test_enhanced_debug_profile_does_not_require_release_gates(self):
+        self.assertFalse(v.uses_16kb_zipalign('enhanced'))
+        self.assertFalse(v.requires_non_debuggable('enhanced'))
+        self.assertFalse(v.requires_store_native_trim('enhanced'))
+
+    def test_enhanced_release_requires_non_debug_without_16kb_trim(self):
+        self.assertTrue(v.requires_non_debuggable('enhanced_release'))
+        self.assertFalse(v.uses_16kb_zipalign('enhanced_release'))
+        self.assertFalse(v.requires_store_native_trim('enhanced_release'))
+
 class ProtectionAndDependencyTests(unittest.TestCase):
     def layout(self, mutable_start):
         b = bytearray(288)

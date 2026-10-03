@@ -4,7 +4,7 @@ Date: 2026-10-02.
 
 ## Flags
 
-Both `common` and `commonRelease` keep `COMMON_BASE=true`. Native-library trim stays `COMMON_STORE=true` only on `commonRelease`.
+Both `common` / `commonEnhancedRelease` and `commonRelease` keep `COMMON_BASE=true`. Native-library trim stays `COMMON_STORE=true` only on `commonRelease`.
 
 New field: `BuildConfig.COMMON_ENHANCED`.
 
@@ -12,6 +12,7 @@ New field: `BuildConfig.COMMON_ENHANCED`.
 |---|---|---|---|---|
 | default / original debug+release | false | false | false | false (fail closed) |
 | `common` | true | false | true | true |
+| `commonEnhancedRelease` | true | false | true | true |
 | `commonRelease` | true | true | false | false |
 | illegal: enhanced without base | false | * | true | false |
 | illegal: store + enhanced | true | true | true | false |
@@ -36,3 +37,7 @@ Profile-selected catalog properties keep existing caller signatures (`SystemTool
 ## Not verified here
 
 Device/AudioManager runtime, Gradle assemble, 16KB devices, Play listing, DSP/root/assistant entry.
+
+## 2026-10-03 公开预览更新
+
+commonEnhancedRelease保持增强身份与受控设备工具，但COMMON_PUBLIC_PREVIEW=true使native裁剪适用于两个公开包。FFmpeg/终端/OCR等不分发；common调试版不变。正式签名不匹配旧DSP Companion，不能将广播权限存在写成DSP可用。

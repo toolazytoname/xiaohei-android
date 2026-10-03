@@ -8,6 +8,6 @@ python3 tools/xiaohei-release/verify_candidate.py \
   --build-tools "$ANDROID_HOME/build-tools/35.0.0" --profile store --out /tmp/store.json
 ```
 
-增强版用 `--profile enhanced`、对应 `app-common.apk`，不传商店 AAB。普通版要求名称“小黑”、包名 `studio.weichao.xiaohei`；增强版要求“小黑·增强”、包名 `studio.weichao.xiaohei.common`。签名工具需要Java。
+增强工程包用 `--profile enhanced`、对应 `app-common.apk`，不传商店 AAB。公开预览增强包用 `--profile enhanced_release`、对应 `app-common-enhanced-release.apk`；该 profile 要求非 debug 与 v2+v3，**不**要求 16KB 或商店 native 裁剪。普通版要求名称“小黑”、包名 `studio.weichao.xiaohei`；增强版要求“小黑·增强”、包名 `studio.weichao.xiaohei.common`。签名工具需要Java。
 
 检查签名、包身份、权限、备份、资源告知、原生依赖闭包。**只有store profile要求全部16KB LOAD/RELRO静态条件、非debug及商店裁剪；增强通过不等于16KB通过。** 两者都不代表设备运行、语音、数据升级、商店资格或许可完整性通过。

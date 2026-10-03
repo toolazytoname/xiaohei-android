@@ -19,7 +19,7 @@
 
 ## 构建接线
 
-`androidComponents.onVariants(selector().withBuildType("common"))` 注册 `filterCommonPackagedAssets`，对合并目录 `sync` 并按相对路径 exclude。输出只给该 variant 的打包任务。
+`androidComponents` 对 `common` / `commonRelease` / `commonEnhancedRelease` 注册 `filter*PackagedAssets`，对合并目录 `sync` 并按相对路径 exclude。输出只给该 variant 的打包任务。JNI 商店裁剪仍只挂在 `commonRelease`。
 
 ## 状态
 
