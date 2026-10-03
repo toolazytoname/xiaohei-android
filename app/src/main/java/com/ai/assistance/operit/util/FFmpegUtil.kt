@@ -1,5 +1,6 @@
 package com.ai.assistance.operit.util
 
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.util.AppLogger
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFprobeKit
@@ -22,6 +23,11 @@ object FFmpegUtil {
      * Execute an FFmpeg command and return if it was successful
      */
     fun executeCommand(command: String): Boolean {
+        if (CommonBaseProfile.storeNativeTrim) return false
+        return executeCommandLoaded(command)
+    }
+
+    private fun executeCommandLoaded(command: String): Boolean {
         try {
             AppLogger.d(TAG, "Executing FFmpeg command: $command")
             val session = FFmpegKit.execute(command)
@@ -47,6 +53,11 @@ object FFmpegUtil {
      * Get media information for a file
      */
     fun getMediaInfo(filePath: String): MediaInformation? {
+        if (CommonBaseProfile.storeNativeTrim) return null
+        return getMediaInfoLoaded(filePath)
+    }
+
+    private fun getMediaInfoLoaded(filePath: String): MediaInformation? {
         return try {
             val mediaInfoSession = FFprobeKit.getMediaInformation(filePath)
             mediaInfoSession.mediaInformation

@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.rememberNavController
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
+import com.ai.assistance.operit.core.commonbase.CommonBaseStartupPolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.data.announcement.RemoteAnnouncementDisplay
@@ -99,8 +101,13 @@ fun OperitApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val appContext = remember(context) { context.applicationContext }
-    val packageManager = remember {
-        PackageManager.getInstance(context, AIToolHandler.getInstance(context))
+    val skipToolPkgNavigation = CommonBaseStartupPolicy.skipToolPkgNavigationRuntime()
+    val packageManager = remember(skipToolPkgNavigation) {
+        if (skipToolPkgNavigation) {
+            null
+        } else {
+            PackageManager.getInstance(context, AIToolHandler.getInstance(context))
+        }
     }
     val remoteAnnouncementRepository = remember { RemoteAnnouncementRepository() }
     val remoteAnnouncementPreferences = remember { RemoteAnnouncementPreferences(context) }
@@ -184,6 +191,15 @@ fun OperitApp(
         if (shortcutNavRequestId == lastHandledShortcutRequestId) {
             return@LaunchedEffect
         }
+        if (!CommonBaseNavigationPolicy.allowsNavItemRoute(navItemRoute = requestNavItem.route)) {
+            AppLogger.w(
+                TAG,
+                "Ignored common-base shortcut navigation for navItem=${requestNavItem.route}"
+            )
+            lastHandledShortcutRequestId = shortcutNavRequestId
+            onShortcutNavHandled(shortcutNavRequestId)
+            return@LaunchedEffect
+        }
 
         val targetEntry = AppRouteCatalog.initialEntry(requestNavItem)
         lastHandledShortcutRequestId = shortcutNavRequestId
@@ -203,7 +219,10 @@ fun OperitApp(
         if (routeNavRequestId == lastHandledRouteRequestId) {
             return@LaunchedEffect
         }
-        if (navigationModel.routesById[requestRouteId] == null) {
+        if (
+            !CommonBaseNavigationPolicy.allowsRoute(routeId = requestRouteId) ||
+                navigationModel.routesById[requestRouteId] == null
+        ) {
             AppLogger.w(TAG, "Ignored pending route navigation for unknown routeId=$requestRouteId")
             lastHandledRouteRequestId = routeNavRequestId
             onRouteNavHandled(routeNavRequestId)
@@ -235,6 +254,13 @@ fun OperitApp(
 
     // Navigation functions
     fun navigateTo(newScreen: Screen, fromDrawer: Boolean = false) {
+        if (!CommonBaseNavigationPolicy.allowsScreenType(typeName = newScreen.javaClass.simpleName)) {
+            AppLogger.w(
+                TAG,
+                "Ignored common-base navigation to ${newScreen.javaClass.simpleName}"
+            )
+            return
+        }
         val nextEntry =
             AppRouteCatalog.toEntry(
                 screen = newScreen,
@@ -280,11 +306,16 @@ fun OperitApp(
     }
 
     fun navigateToNavigationEntry(entry: NavigationEntrySpec) {
+        if (!CommonBaseNavigationPolicy.allowsRoute(routeId = entry.routeId)) {
+            AppLogger.w(TAG, "Ignored common-base navigation entry ${entry.entryId}")
+            return
+        }
         val action = entry.action
         if (action != null) {
             val ownerPackageName = entry.ownerPackageName ?: return
+            val toolPkgManager = packageManager ?: return
             scope.launch(Dispatchers.IO) {
-                packageManager.runToolPkgNavigationEntryAction(
+                toolPkgManager.runToolPkgNavigationEntryAction(
                     containerPackageName = ownerPackageName,
                     entryId = entry.entryId,
                     functionName = action.functionName,
@@ -368,7 +399,9 @@ fun OperitApp(
         NavItem.Settings,
         NavItem.Help,
         NavItem.About
-    )
+    ).filter { item ->
+        CommonBaseNavigationPolicy.allowsNavItemRoute(navItemRoute = item.route)
+    }
 
     // Network state monitoring
     var isNetworkAvailable by remember { mutableStateOf(false) }
@@ -414,13 +447,20 @@ fun OperitApp(
             .value
 
     // Create an instance of MCPRepository
-    val mcpRepository = remember { MCPRepository(context) }
+    val mcpRepository = remember {
+        if (CommonBaseStartupPolicy.skipTerminalMcpRuntimePrep()) {
+            null
+        } else {
+            MCPRepository(context)
+        }
+    }
 
     // Initialize MCP plugin status
     LaunchedEffect(Unit) {
+        val repository = mcpRepository ?: return@LaunchedEffect
         launch {
             // First scan local installed plugins
-            mcpRepository.syncInstalledStatus()
+            repository.syncInstalledStatus()
         }
     }
 
@@ -430,17 +470,21 @@ fun OperitApp(
     // Main app container
     Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
         DisposableEffect(packageManager) {
+            val toolPkgManager = packageManager ?: return@DisposableEffect onDispose {}
             val listener = PackageManager.ToolPkgRuntimeChangeListener { _ ->
                 navigationRevision += 1
             }
-            packageManager.addToolPkgRuntimeChangeListener(listener)
+            toolPkgManager.addToolPkgRuntimeChangeListener(listener)
             onDispose {
-                packageManager.removeToolPkgRuntimeChangeListener(listener)
+                toolPkgManager.removeToolPkgRuntimeChangeListener(listener)
             }
         }
         DisposableEffect(routerState, navigationModel) {
             AppRouterGateway.install(
                 handler = { routeId, args, source ->
+                    if (!CommonBaseNavigationPolicy.allowsRoute(routeId = routeId)) {
+                        return@install
+                    }
                     val routeSpec = navigationModel.routesById[routeId] ?: return@install
                     val currentEntry = routerState.currentEntry
                     if (
@@ -464,6 +508,9 @@ fun OperitApp(
                     }
                 },
                 reset = { routeId, args, source ->
+                    if (!CommonBaseNavigationPolicy.allowsRoute(routeId = routeId)) {
+                        return@install
+                    }
                     navigationModel.routesById[routeId] ?: return@install
                     requestRouteTransition {
                         isNavigatingBack = false

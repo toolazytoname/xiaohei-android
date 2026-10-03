@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 import com.ai.assistance.operit.core.config.SystemToolPrompts
 import com.ai.assistance.operit.util.LocaleUtils
 import sh.calvin.reorderable.ReorderableItem
@@ -172,6 +173,7 @@ fun ToolPromptManagerDialog(
                 }
 
                 item {
+                    if (CommonBaseNavigationPolicy.allowsScreenType(typeName = "Packages")) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -184,6 +186,7 @@ fun ToolPromptManagerDialog(
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 13.sp,
                         )
+                    }
                     }
                 }
             }

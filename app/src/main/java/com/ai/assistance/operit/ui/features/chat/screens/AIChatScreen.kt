@@ -43,6 +43,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseStartupPolicy
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.model.ApiProviderType
@@ -384,6 +386,15 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
         onClearSharedFiles = SharedFileHandler::clearSharedFiles,
         onClearSharedText = SharedFileHandler::clearSharedText
     )
+
+    val restoredCameraPhoto by CameraCaptureResults.successUri.collectAsState()
+    LaunchedEffect(restoredCameraPhoto, isCurrentScreen) {
+        if (!isCurrentScreen) return@LaunchedEffect
+        val uri = restoredCameraPhoto ?: return@LaunchedEffect
+        if (!CameraCaptureResults.consume(uri)) return@LaunchedEffect
+        actualViewModel.handleTakenPhoto(uri)
+        actualViewModel.resetAttachmentPanelState()
+    }
 
     val pendingChatDraft by PendingChatDraftHandler.pendingDraft.collectAsState()
     LaunchedEffect(pendingChatDraft, isCurrentScreen) {
@@ -732,13 +743,17 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     val showWebView by actualViewModel.showWebView.collectAsState()
     // 收集AI电脑显示状态
     val showAiComputer by actualViewModel.showAiComputer.collectAsState()
+    val allowAiComputerOverlay = CommonBaseUiResiduePolicy.allowsAiComputer()
+    val allowWorkspaceOverlay = CommonBaseUiResiduePolicy.allowsWorkspace()
+    val showAiComputerOverlay = showAiComputer && allowAiComputerOverlay
+    val showWorkspaceOverlay = showWebView && allowWorkspaceOverlay
     val shouldUseChatLocalImeHandling =
         inputStyle == UserPreferencesManager.INPUT_STYLE_AGENT &&
-            !showWebView &&
-            !showAiComputer
+            !showWorkspaceOverlay &&
+            !showAiComputerOverlay
     var hasEverShownWebView by remember { mutableStateOf(false) }
-    LaunchedEffect(showWebView, isWorkspacePreparing) {
-        if (showWebView || isWorkspacePreparing) {
+    LaunchedEffect(showWorkspaceOverlay, isWorkspacePreparing, allowWorkspaceOverlay) {
+        if (allowWorkspaceOverlay && (showWorkspaceOverlay || isWorkspacePreparing)) {
             hasEverShownWebView = true
         }
     }
@@ -791,50 +806,54 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
 
     // 当showWebView或showAiComputer状态改变时，更新TopAppBar的actions
     // 使用DisposableEffect确保当AIChatScreen离开组合时，actions被清空
-    LaunchedEffect(isCurrentScreen, showWebView, showAiComputer, isWorkspacePreparing, appBarContentColor, hasBoundWorkspace) {
+    LaunchedEffect(isCurrentScreen, showWorkspaceOverlay, showAiComputerOverlay, isWorkspacePreparing, appBarContentColor, hasBoundWorkspace, allowAiComputerOverlay, allowWorkspaceOverlay) {
         if (isCurrentScreen) {
             setTopBarActions {
-                // AI电脑模式切换按钮
-                IconButton(
-                        enabled = !isWorkspacePreparing,
-                        onClick = {
-                            actualViewModel.onAiComputerButtonClick()
-                        }
-                ) {
-                    Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = stringResource(R.string.ai_computer),
-                            tint =
-                            if (showAiComputer) MaterialTheme.colorScheme.primaryContainer
-                            else appBarContentColor
-                    )
-                }
-
-                // Web开发模式切换按钮
-                IconButton(
-                        enabled = !isWorkspacePreparing,
-                        onClick = {
-                            actualViewModel.onWorkspaceButtonClick()
-                        }
-                ) {
-                    if (isWorkspacePreparing) {
-                        CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = appBarContentColor
-                        )
-                    } else {
+                if (allowAiComputerOverlay) {
+                    // AI电脑模式切换按钮
+                    IconButton(
+                            enabled = !isWorkspacePreparing,
+                            onClick = {
+                                actualViewModel.onAiComputerButtonClick()
+                            }
+                    ) {
                         Icon(
-                                imageVector =
-                                if (hasBoundWorkspace) Icons.Default.Code
-                                else Icons.Default.CodeOff,
-                                contentDescription =
-                                if (hasBoundWorkspace) stringResource(R.string.workspace)
-                                else stringResource(R.string.setup_workspace),
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = stringResource(R.string.ai_computer),
                                 tint =
-                                if (showWebView) MaterialTheme.colorScheme.primaryContainer
+                                if (showAiComputerOverlay) MaterialTheme.colorScheme.primaryContainer
                                 else appBarContentColor
                         )
+                    }
+                }
+
+                if (allowWorkspaceOverlay) {
+                    // Web开发模式切换按钮
+                    IconButton(
+                            enabled = !isWorkspacePreparing,
+                            onClick = {
+                                actualViewModel.onWorkspaceButtonClick()
+                            }
+                    ) {
+                        if (isWorkspacePreparing) {
+                            CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = appBarContentColor
+                            )
+                        } else {
+                            Icon(
+                                    imageVector =
+                                    if (hasBoundWorkspace) Icons.Default.Code
+                                    else Icons.Default.CodeOff,
+                                    contentDescription =
+                                    if (hasBoundWorkspace) stringResource(R.string.workspace)
+                                    else stringResource(R.string.setup_workspace),
+                                    tint =
+                                    if (showWorkspaceOverlay) MaterialTheme.colorScheme.primaryContainer
+                                    else appBarContentColor
+                            )
+                        }
                     }
                 }
             }
@@ -1207,7 +1226,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
         )
 
         val workspaceOverlayModifier =
-            if (showWebView) {
+            if (showWorkspaceOverlay) {
                 Modifier
                     .fillMaxSize()
                     .clipToBounds()
@@ -1223,11 +1242,11 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
             content = {
                 // The content is composed unconditionally, keeping it "alive"
                 val currentChat = chatHistories.find { it.id == currentChatId }
-                if (hasEverShownWebView && currentChat != null) {
+                if (allowWorkspaceOverlay && hasEverShownWebView && currentChat != null) {
                     WorkspaceScreen(
                         actualViewModel = actualViewModel,
                         currentChat = currentChat,
-                        isVisible = showWebView, // Pass visibility state
+                        isVisible = showWorkspaceOverlay, // Pass visibility state
                         onExportClick = { workDir ->
                             webContentDir = workDir
                             AppLogger.d(
@@ -1243,7 +1262,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
             if (measurables.isEmpty()) {
                 layout(0, 0) {}
             } else {
-                if (showWebView) {
+                if (showWorkspaceOverlay) {
                     val placeable = measurables.first().measure(constraints)
                     layout(placeable.width, placeable.height) {
                         placeable.placeRelative(0, 0)
@@ -1258,7 +1277,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
         }
 
         // AI电脑模式作为浮层：关闭时完全移出组合，确保 SurfaceView 被释放，避免机型相关残影
-        if (showAiComputer) {
+        if (showAiComputerOverlay) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1269,7 +1288,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
         }
 
         AnimatedVisibility(
-            visible = isWorkspacePreparing,
+            visible = allowWorkspaceOverlay && isWorkspacePreparing,
             enter = fadeIn(animationSpec = tween(180)),
             exit = fadeOut(animationSpec = tween(120))
         ) {
@@ -1785,12 +1804,18 @@ private fun ChatInputBottomBar(
     val sendMessage: () -> Unit = {
         coroutineScope.launch {
             if (currentChatId.isNullOrBlank()) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.chat_please_create_new_chat),
-                    Toast.LENGTH_SHORT,
-                ).show()
-                return@launch
+                if (!CommonBaseStartupPolicy.allowComposerSendWithoutExistingChat()) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.chat_please_create_new_chat),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    return@launch
+                }
+                AppLogger.d(
+                    "AIChatScreen",
+                    "common-base send with empty currentChatId; MessageCoordinationDelegate will auto-create"
+                )
             }
 
             val submitDecision =

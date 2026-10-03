@@ -1,5 +1,7 @@
 package com.ai.assistance.operit.services.floating
 
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
+
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
@@ -676,6 +678,10 @@ class FloatingWindowManager(
     }
 
     private fun switchMode(newMode: FloatingMode) {
+        if (newMode == FloatingMode.SCREEN_OCR && !CommonBaseUiResiduePolicy.allowsScreenOcr()) {
+            switchMode(FloatingMode.WINDOW)
+            return
+        }
         if (state.isTransitioning || state.currentMode.value == newMode) return
         state.isTransitioning = true
 

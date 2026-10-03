@@ -1,39 +1,13 @@
 package com.ai.assistance.operit.data.preferences
 
 import android.content.Context
+import com.ai.assistance.operit.core.commonbase.CommonBaseCharacterCardToolAccess
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.config.SystemToolPrompts
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.data.model.CharacterCardToolAccessConfig
 import com.ai.assistance.operit.data.skill.SkillRepository
 import kotlinx.coroutines.flow.first
-
-data class ResolvedCharacterCardToolAccess(
-    val customEnabled: Boolean,
-    val effectiveBuiltinToolVisibility: Map<String, Boolean>,
-    val allowedPackageNames: Set<String>,
-    val allowedSkillNames: Set<String>,
-    val allowedMcpServerNames: Set<String>,
-    val canUsePackageSystem: Boolean,
-    val hasAnyAllowedExternalSource: Boolean
-) {
-    fun isBuiltinToolAllowed(toolName: String): Boolean {
-        if (!customEnabled) {
-            return effectiveBuiltinToolVisibility[toolName] ?: true
-        }
-        return when (toolName) {
-            "package_proxy" -> hasAnyAllowedExternalSource
-            else -> effectiveBuiltinToolVisibility[toolName] == true
-        }
-    }
-
-    fun isExternalSourceAllowed(sourceName: String): Boolean {
-        if (!customEnabled) return true
-        if (!canUsePackageSystem) return false
-        return allowedPackageNames.contains(sourceName) ||
-            allowedSkillNames.contains(sourceName) ||
-            allowedMcpServerNames.contains(sourceName)
-    }
-}
 
 class CharacterCardToolAccessResolver private constructor(private val context: Context) {
     companion object {
@@ -55,23 +29,37 @@ class CharacterCardToolAccessResolver private constructor(private val context: C
 
     suspend fun resolve(
         roleCardId: String?,
-        packageManager: PackageManager,
-        globalToolVisibility: Map<String, Boolean>? = null
+        packageManager: PackageManager? = null,
+        globalToolVisibility: Map<String, Boolean>? = null,
+        enabled: Boolean = CommonBaseProfile.isEnabled
     ): ResolvedCharacterCardToolAccess {
         val effectiveGlobalToolVisibility = globalToolVisibility
             ?: runCatching { apiPreferences.toolPromptVisibilityFlow.first() }.getOrElse { emptyMap() }
 
-        val globalPackageNames = buildGlobalPackageNames(packageManager)
-        val globalSkillNames = LinkedHashSet(skillRepository.getAiVisibleSkillPackages().keys)
-        val globalMcpServerNames = LinkedHashSet(packageManager.getAvailableServerPackages().keys)
+        val roleCardConfig = loadRoleCardConfig(roleCardId)
+        if (enabled) {
+            val commonAccess = CommonBaseCharacterCardToolAccess.resolve(
+                customEnabled = roleCardConfig.enabled,
+                allowedBuiltinTools = roleCardConfig.allowedBuiltinTools,
+                globalToolVisibility = effectiveGlobalToolVisibility
+            )
+            return ResolvedCharacterCardToolAccess(
+                customEnabled = commonAccess.customEnabled,
+                effectiveBuiltinToolVisibility = commonAccess.effectiveBuiltinToolVisibility,
+                allowedPackageNames = emptySet(),
+                allowedSkillNames = emptySet(),
+                allowedMcpServerNames = emptySet(),
+                canUsePackageSystem = false,
+                hasAnyAllowedExternalSource = false
+            )
+        }
 
-        val roleCardConfig = roleCardId
-            ?.takeIf { it.isNotBlank() }
-            ?.let { cardId ->
-                runCatching { characterCardManager.getCharacterCard(cardId).toolAccessConfig.normalized() }
-                    .getOrDefault(CharacterCardToolAccessConfig())
-            }
-            ?: CharacterCardToolAccessConfig()
+        val resolvedPackageManager = requireNotNull(packageManager) {
+            "PackageManager is required to resolve character-card tool access outside the common-base profile"
+        }
+        val globalPackageNames = buildGlobalPackageNames(resolvedPackageManager)
+        val globalSkillNames = LinkedHashSet(skillRepository.getAiVisibleSkillPackages().keys)
+        val globalMcpServerNames = LinkedHashSet(resolvedPackageManager.getAvailableServerPackages().keys)
 
         if (!roleCardConfig.enabled) {
             val hasAnyGlobalExternalSource = globalPackageNames.isNotEmpty() ||
@@ -131,6 +119,16 @@ class CharacterCardToolAccessResolver private constructor(private val context: C
             canUsePackageSystem = canUsePackageSystem,
             hasAnyAllowedExternalSource = hasAnyAllowedExternalSource
         )
+    }
+
+    private suspend fun loadRoleCardConfig(roleCardId: String?): CharacterCardToolAccessConfig {
+        return roleCardId
+            ?.takeIf { it.isNotBlank() }
+            ?.let { cardId ->
+                runCatching { characterCardManager.getCharacterCard(cardId).toolAccessConfig.normalized() }
+                    .getOrDefault(CharacterCardToolAccessConfig())
+            }
+            ?: CharacterCardToolAccessConfig()
     }
 
     private fun buildGlobalPackageNames(packageManager: PackageManager): LinkedHashSet<String> {

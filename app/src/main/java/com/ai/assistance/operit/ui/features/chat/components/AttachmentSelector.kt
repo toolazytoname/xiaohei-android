@@ -57,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,13 +75,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.packTool.PackageManager as ToolPackageManager
 import com.ai.assistance.operit.data.skill.SkillRepository
 import kotlinx.coroutines.launch
-import java.io.File
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 
 /** 简约风格的附件选择器组件 */
 @OptIn(ExperimentalFoundationApi::class)
@@ -173,60 +173,84 @@ fun AttachmentSelectorPanel(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val panelItems =
-                        listOf(
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Image,
-                                        label = context.getString(R.string.attachment_photo),
-                                        onClick = { imagePickerLauncher.launch("image/*") }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.PhotoCamera,
-                                        label = context.getString(R.string.attachment_camera),
-                                        onClick = launchCameraCapture
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Memory,
-                                        label = context.getString(R.string.attachment_memory),
-                                        onClick = {
-                                            onAttachMemory()
-                                            onDismiss()
-                                        }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Description,
-                                        label = context.getString(R.string.attachment_file),
-                                        onClick = { filePickerLauncher.launch("*/*") }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.ScreenshotMonitor,
-                                        label = context.getString(R.string.attachment_screen_content),
-                                        onClick = {
-                                            onAttachScreenContent()
-                                            onDismiss()
-                                        }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.Notifications,
-                                        label = context.getString(R.string.attachment_notifications),
-                                        onClick = {
-                                            onAttachNotifications()
-                                            onDismiss()
-                                        }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.LocationOn,
-                                        label = context.getString(R.string.attachment_location),
-                                        onClick = {
-                                            onAttachLocation()
-                                            onDismiss()
-                                        }
-                                ),
-                                AttachmentPanelItem(
-                                        icon = Icons.Default.AutoAwesome,
-                                        label = context.getString(R.string.attachment_package),
-                                        onClick = { showPackageDialog = true }
+                        buildList {
+                                add(
+                                        AttachmentPanelItem(
+                                                icon = Icons.Default.Image,
+                                                label = context.getString(R.string.attachment_photo),
+                                                onClick = { imagePickerLauncher.launch("image/*") }
+                                        )
                                 )
-                        )
+                                add(
+                                        AttachmentPanelItem(
+                                                icon = Icons.Default.PhotoCamera,
+                                                label = context.getString(R.string.attachment_camera),
+                                                onClick = launchCameraCapture
+                                        )
+                                )
+                                add(
+                                        AttachmentPanelItem(
+                                                icon = Icons.Default.Memory,
+                                                label = context.getString(R.string.attachment_memory),
+                                                onClick = {
+                                                    onAttachMemory()
+                                                    onDismiss()
+                                                }
+                                        )
+                                )
+                                add(
+                                        AttachmentPanelItem(
+                                                icon = Icons.Default.Description,
+                                                label = context.getString(R.string.attachment_file),
+                                                onClick = { filePickerLauncher.launch("*/*") }
+                                        )
+                                )
+                                if (CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+                                    add(
+                                            AttachmentPanelItem(
+                                                    icon = Icons.Default.ScreenshotMonitor,
+                                                    label = context.getString(R.string.attachment_screen_content),
+                                                    onClick = {
+                                                        onAttachScreenContent()
+                                                        onDismiss()
+                                                    }
+                                            )
+                                    )
+                                }
+                                if (CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+                                    add(
+                                            AttachmentPanelItem(
+                                                    icon = Icons.Default.Notifications,
+                                                    label = context.getString(R.string.attachment_notifications),
+                                                    onClick = {
+                                                        onAttachNotifications()
+                                                        onDismiss()
+                                                    }
+                                            )
+                                    )
+                                }
+                                if (CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+                                    add(
+                                            AttachmentPanelItem(
+                                                    icon = Icons.Default.LocationOn,
+                                                    label = context.getString(R.string.attachment_location),
+                                                    onClick = {
+                                                        onAttachLocation()
+                                                        onDismiss()
+                                                    }
+                                            )
+                                    )
+                                }
+                                if (CommonBaseUiResiduePolicy.allowsPackageAttach()) {
+                                    add(
+                                            AttachmentPanelItem(
+                                                    icon = Icons.Default.AutoAwesome,
+                                                    label = context.getString(R.string.attachment_package),
+                                                    onClick = { showPackageDialog = true }
+                                            )
+                                    )
+                                }
+                        }
 
                 val pages = panelItems.chunked(8).ifEmpty { listOf(emptyList()) }
                 val pagerState = rememberPagerState(pageCount = { pages.size })
@@ -337,8 +361,6 @@ fun AttachmentSelectorPopupPanel(
         onTakePhoto: (Uri) -> Unit,
         onDismiss: () -> Unit
 ) {
-    if (!visible) return
-
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val launchCameraCapture = rememberCameraCaptureLauncher(
@@ -378,61 +400,88 @@ fun AttachmentSelectorPopupPanel(
         }
     }
 
+    // Register result launchers even when the panel is restored hidden.
+    if (!visible) return
+
     val panelItems =
-            listOf(
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Image,
-                            label = context.getString(R.string.attachment_photo),
-                            onClick = { imagePickerLauncher.launch("image/*") }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.PhotoCamera,
-                            label = context.getString(R.string.attachment_camera),
-                            onClick = launchCameraCapture
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Memory,
-                            label = context.getString(R.string.attachment_memory),
-                            onClick = {
-                                onAttachMemory()
-                                onDismiss()
-                            }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Description,
-                            label = context.getString(R.string.attachment_file),
-                            onClick = { filePickerLauncher.launch("*/*") }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.ScreenshotMonitor,
-                            label = context.getString(R.string.attachment_screen_content),
-                            onClick = {
-                                onAttachScreenContent()
-                                onDismiss()
-                            }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.Notifications,
-                            label = context.getString(R.string.attachment_notifications),
-                            onClick = {
-                                onAttachNotifications()
-                                onDismiss()
-                            }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.LocationOn,
-                            label = context.getString(R.string.attachment_location),
-                            onClick = {
-                                onAttachLocation()
-                                onDismiss()
-                            }
-                    ),
-                    AttachmentPanelItem(
-                            icon = Icons.Default.AutoAwesome,
-                            label = context.getString(R.string.attachment_package),
-                            onClick = { showPackageDialog = true }
+            buildList {
+                    add(
+                            AttachmentPanelItem(
+                                    icon = Icons.Default.Image,
+                                    label = context.getString(R.string.attachment_photo),
+                                    onClick = { imagePickerLauncher.launch("image/*") }
+                            )
                     )
-            )
+                    add(
+                            AttachmentPanelItem(
+                                    icon = Icons.Default.PhotoCamera,
+                                    label = context.getString(R.string.attachment_camera),
+                                    onClick = launchCameraCapture
+                            )
+                    )
+                    add(
+                            AttachmentPanelItem(
+                                    icon = Icons.Default.Memory,
+                                    label = context.getString(R.string.attachment_memory),
+                                    onClick = {
+                                        onAttachMemory()
+                                        onDismiss()
+                                    }
+                            )
+                    )
+                    add(
+                            AttachmentPanelItem(
+                                    icon = Icons.Default.Description,
+                                    label = context.getString(R.string.attachment_file),
+                                    onClick = { filePickerLauncher.launch("*/*") }
+                            )
+                    )
+                    if (CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+                        add(
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.ScreenshotMonitor,
+                                        label = context.getString(R.string.attachment_screen_content),
+                                        onClick = {
+                                            onAttachScreenContent()
+                                            onDismiss()
+                                        }
+                                )
+                        )
+                    }
+                    if (CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+                        add(
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.Notifications,
+                                        label = context.getString(R.string.attachment_notifications),
+                                        onClick = {
+                                            onAttachNotifications()
+                                            onDismiss()
+                                        }
+                                )
+                        )
+                    }
+                    if (CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+                        add(
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.LocationOn,
+                                        label = context.getString(R.string.attachment_location),
+                                        onClick = {
+                                            onAttachLocation()
+                                            onDismiss()
+                                        }
+                                )
+                        )
+                    }
+                    if (CommonBaseUiResiduePolicy.allowsPackageAttach()) {
+                        add(
+                                AttachmentPanelItem(
+                                        icon = Icons.Default.AutoAwesome,
+                                        label = context.getString(R.string.attachment_package),
+                                        onClick = { showPackageDialog = true }
+                                )
+                        )
+                    }
+            }
 
     Popup(
             alignment = Alignment.TopStart,
@@ -541,28 +590,53 @@ private fun rememberCameraCaptureLauncher(
     val context = LocalContext.current
     val latestOnTakePhoto by rememberUpdatedState(onTakePhoto)
     val latestOnDismiss by rememberUpdatedState(onDismiss)
-    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val pendingSuccess by CameraCaptureResults.successUri.collectAsState()
 
-    val takePictureLauncher =
-            rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicture()) { success ->
-                val capturedUri = tempCameraUri
-                tempCameraUri = null
-                if (success && capturedUri != null) {
-                    latestOnTakePhoto(capturedUri)
-                    latestOnDismiss()
+    LaunchedEffect(pendingSuccess) {
+        val uri = pendingSuccess ?: return@LaunchedEffect
+        if (!CameraCaptureResults.consume(uri)) {
+            return@LaunchedEffect
+        }
+        latestOnTakePhoto(uri)
+        latestOnDismiss()
+    }
+
+    fun launchExternalTakePicture() {
+        val host = context.findCameraCaptureHost()
+        if (host == null) {
+            Toast.makeText(
+                            context,
+                            context.getString(
+                                    R.string.image_capture_failed,
+                                    "CameraCaptureHost"
+                            ),
+                            Toast.LENGTH_SHORT
+                    )
+                    .show()
+            return
+        }
+        val capture =
+                try {
+                    CameraCaptureState.createPending(context)
+                } catch (e: Exception) {
+                    Toast.makeText(
+                                    context,
+                                    context.getString(
+                                            R.string.image_capture_failed,
+                                            e.message ?: e.javaClass.simpleName
+                                    ),
+                                    Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    return
                 }
-            }
-
-    fun launchCameraCapture() {
-        val uri = createTempCameraUri(context)
-        tempCameraUri = uri
-        takePictureLauncher.launch(uri)
+        host.launchExternalTakePicture(capture)
     }
 
     val requestCameraPermissionLauncher =
             rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { isGranted ->
                 if (isGranted) {
-                    launchCameraCapture()
+                    launchExternalTakePicture()
                 } else {
                     Toast.makeText(
                                     context,
@@ -574,25 +648,19 @@ private fun rememberCameraCaptureLauncher(
             }
 
     return {
-        val hasCameraPermission =
-                ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                        PackageManager.PERMISSION_GRANTED
-        if (hasCameraPermission) {
-            launchCameraCapture()
+        if (!CommonBaseUiResiduePolicy.requestsOwnCameraPermission()) {
+            launchExternalTakePicture()
         } else {
-            requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            val hasCameraPermission =
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                            PackageManager.PERMISSION_GRANTED
+            if (hasCameraPermission) {
+                launchExternalTakePicture()
+            } else {
+                requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
         }
     }
-}
-
-private fun createTempCameraUri(context: Context): Uri {
-    val authority = "${context.applicationContext.packageName}.fileprovider"
-    val tmpFile =
-            File.createTempFile("temp_image_", ".jpg", context.cacheDir).apply {
-                createNewFile()
-                deleteOnExit()
-            }
-    return FileProvider.getUriForFile(context, authority, tmpFile)
 }
 
 private fun getAttachmentSource(uri: Uri): String? {
@@ -658,6 +726,8 @@ fun PackageSelectorDialog(
         onDismiss: () -> Unit,
         onPackageSelected: (String) -> Unit
 ) {
+    if (!CommonBaseUiResiduePolicy.allowsPackageAttach()) return
+
     if (!visible) return
 
     val context = LocalContext.current

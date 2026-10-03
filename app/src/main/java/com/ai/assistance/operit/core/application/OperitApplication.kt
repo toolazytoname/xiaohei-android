@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import com.ai.assistance.operit.BuildConfig
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.chat.AIMessageManager
+import com.ai.assistance.operit.core.commonbase.CommonBaseStartupPolicy
 import com.ai.assistance.operit.api.chat.AIForegroundService
 import com.ai.assistance.operit.api.chat.library.MemoryAutoSaveScheduler
 import com.ai.assistance.operit.plugins.PluginRegistry
@@ -190,7 +191,11 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
 
         // Initialize AIMessageManager
         AIMessageManager.initialize(this)
-        PluginRegistry.initializeBuiltins()
+        if (CommonBaseStartupPolicy.skipBuiltinWorkflowAndToolboxPlugins()) {
+            AppLogger.d(TAG, "common-base skips Toolbox/ToolPkg/Workflow builtin plugins")
+        } else {
+            PluginRegistry.initializeBuiltins()
+        }
         AppLifecycleHookPluginRegistry.dispatchAsync(
             event = AppLifecycleEvent.APPLICATION_CREATE,
             params =
@@ -357,11 +362,15 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
             AppLogger.d(TAG, "【启动计时】AIToolHandler初始化并注册工具完成（异步/串行） - ${System.currentTimeMillis() - toolStartTime}ms")
         }
         
-        // 初始化工作流调度器（异步）
-        applicationScope.launch {
-            val schedulerStartTime = System.currentTimeMillis()
-            WorkflowSchedulerInitializer.initialize(applicationContext)
-            AppLogger.d(TAG, "【启动计时】WorkflowScheduler初始化完成（异步） - ${System.currentTimeMillis() - schedulerStartTime}ms")
+        if (CommonBaseStartupPolicy.skipWorkflowScheduler()) {
+            AppLogger.d(TAG, "common-base skips WorkflowScheduler initialization")
+        } else {
+            // 初始化工作流调度器（异步）
+            applicationScope.launch {
+                val schedulerStartTime = System.currentTimeMillis()
+                WorkflowSchedulerInitializer.initialize(applicationContext)
+                AppLogger.d(TAG, "【启动计时】WorkflowScheduler初始化完成（异步） - ${System.currentTimeMillis() - schedulerStartTime}ms")
+            }
         }
 
         applicationScope.launch {
@@ -377,15 +386,19 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
             }
         }
 
-        // 在应用启动时尝试绑定无障碍服务提供者（解决后台绑定限制问题）
-        applicationScope.launch {
-            AppLogger.d(TAG, "【启动计时】开始预绑定无障碍服务提供者...")
-            val bindStartTime = System.currentTimeMillis()
-            try {
-                val bound = com.ai.assistance.operit.data.repository.UIHierarchyManager.bindToService(this@OperitApplication)
-                AppLogger.d(TAG, "【启动计时】无障碍服务预绑定完成（异步） - 结果: $bound, 耗时: ${System.currentTimeMillis() - bindStartTime}ms")
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "无障碍服务预绑定失败", e)
+        if (CommonBaseStartupPolicy.skipUiHierarchyProviderBind()) {
+            AppLogger.d(TAG, "common-base skips UIHierarchyManager provider bind")
+        } else {
+            // 在应用启动时尝试绑定无障碍服务提供者（解决后台绑定限制问题）
+            applicationScope.launch {
+                AppLogger.d(TAG, "【启动计时】开始预绑定无障碍服务提供者...")
+                val bindStartTime = System.currentTimeMillis()
+                try {
+                    val bound = com.ai.assistance.operit.data.repository.UIHierarchyManager.bindToService(this@OperitApplication)
+                    AppLogger.d(TAG, "【启动计时】无障碍服务预绑定完成（异步） - 结果: $bound, 耗时: ${System.currentTimeMillis() - bindStartTime}ms")
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "无障碍服务预绑定失败", e)
+                }
             }
         }
         

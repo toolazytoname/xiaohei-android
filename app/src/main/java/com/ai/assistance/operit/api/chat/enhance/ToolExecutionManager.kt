@@ -7,6 +7,9 @@ import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.AIToolHookDecision
 import com.ai.assistance.operit.core.tools.StringResultData
 import com.ai.assistance.operit.core.tools.ToolExecutor
+import com.ai.assistance.operit.core.commonbase.CommonBaseExecutionGuard
+import com.ai.assistance.operit.core.commonbase.CommonBasePackageLookup
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.tools.climode.CliToolModeSupport
 import com.ai.assistance.operit.core.tools.climode.ToolExposureMode
 import com.ai.assistance.operit.data.model.ToolInvocation
@@ -46,7 +49,14 @@ object ToolExecutionManager {
 
     data class ToolRuntimeContext(
         val callerCardId: String? = null,
-        val toolExposureMode: ToolExposureMode = ToolExposureMode.FULL
+        val toolExposureMode: ToolExposureMode = ToolExposureMode.FULL,
+        val explicitUserConfirmation: Boolean = false
+    )
+
+    data class ToolPermissionOutcome(
+        val granted: Boolean,
+        val errorResult: ToolResult?,
+        val explicitUserConfirmation: Boolean
     )
 
     private data class ResolvedToolTarget(
@@ -424,6 +434,15 @@ object ToolExecutionManager {
         invocation: ToolInvocation,
         toolExposureMode: ToolExposureMode = ToolExposureMode.FULL
     ): Pair<Boolean, ToolResult?> {
+        val outcome = checkToolPermissionOutcome(toolHandler, invocation, toolExposureMode)
+        return Pair(outcome.granted, outcome.errorResult)
+    }
+
+    suspend fun checkToolPermissionOutcome(
+        toolHandler: AIToolHandler,
+        invocation: ToolInvocation,
+        toolExposureMode: ToolExposureMode = ToolExposureMode.FULL
+    ): ToolPermissionOutcome {
         val resolvedTarget = resolveToolTarget(invocation.tool)
         val permissionTool =
             if (toolExposureMode == ToolExposureMode.CLI &&
@@ -438,24 +457,46 @@ object ToolExecutionManager {
             (invocation.tool.name == CliToolModeSupport.SEARCH_TOOL_NAME ||
                 invocation.tool.name == CliToolModeSupport.PROXY_TOOL_NAME)
         ) {
+            if (CommonBaseProfile.isEnabled) {
+                val errorResult =
+                    ToolResult(
+                        toolName = resolvedTarget.displayName,
+                        success = false,
+                        result = StringResultData(""),
+                        error =
+                            "CLI search/proxy tools are not available in the common base profile."
+                    )
+                toolHandler.notifyToolPermissionChecked(
+                    permissionTool,
+                    granted = false,
+                    reason = errorResult.error
+                )
+                return ToolPermissionOutcome(
+                    granted = false,
+                    errorResult = errorResult,
+                    explicitUserConfirmation = false
+                )
+            }
             toolHandler.notifyToolPermissionChecked(
                 permissionTool,
                 granted = true,
                 reason = "CLI public tool"
             )
-            return Pair(true, null)
+            return ToolPermissionOutcome(
+                granted = true,
+                errorResult = null,
+                explicitUserConfirmation = false
+            )
         }
 
-        // 检查是否强制拒绝权限（deny_tool标记）
-        val hasPromptForPermission = !invocation.rawText.contains("deny_tool")
+        val honorDenyToolBypass =
+            invocation.rawText.contains("deny_tool") && !CommonBaseProfile.isEnabled
 
-        if (hasPromptForPermission) {
-            // 检查权限，如果需要则弹出权限请求界面
+        if (!honorDenyToolBypass) {
             val toolPermissionSystem = toolHandler.getToolPermissionSystem()
-            val hasPermission = toolPermissionSystem.checkToolPermission(permissionTool)
+            val permissionDecision = toolPermissionSystem.checkToolPermissionDecision(permissionTool)
 
-            // 如果权限被拒绝，创建错误结果
-            if (!hasPermission) {
+            if (!permissionDecision.granted) {
                 val errorResult =
                     ToolResult(
                         toolName = resolvedTarget.displayName,
@@ -468,11 +509,19 @@ object ToolExecutionManager {
                     granted = false,
                     reason = errorResult.error
                 )
-                return Pair(false, errorResult)
+                return ToolPermissionOutcome(
+                    granted = false,
+                    errorResult = errorResult,
+                    explicitUserConfirmation = false
+                )
             }
 
             toolHandler.notifyToolPermissionChecked(permissionTool, granted = true)
-            return Pair(true, null)
+            return ToolPermissionOutcome(
+                granted = true,
+                errorResult = null,
+                explicitUserConfirmation = permissionDecision.viaExplicitPrompt
+            )
         }
 
         toolHandler.notifyToolPermissionChecked(
@@ -480,7 +529,11 @@ object ToolExecutionManager {
             granted = true,
             reason = "Permission check bypassed by deny_tool tag."
         )
-        return Pair(true, null)
+        return ToolPermissionOutcome(
+            granted = true,
+            errorResult = null,
+            explicitUserConfirmation = false
+        )
     }
 
     /**
@@ -488,7 +541,7 @@ object ToolExecutionManager {
      * 执行工具调用，包括权限检查、并行/串行执行和结果聚合。
      * @param invocations 要执行的工具调用列表。
      * @param toolHandler AIToolHandler 的实例。
-     * @param packageManager PackageManager 的实例。
+     * @param packageManager PackageManager 的实例。共同基础版传入 null，且不得在此路径上创建实例。
      * @param collector 用于实时输出结果的 StreamCollector。
      * @return 所有工具执行结果的列表。
      */
@@ -496,7 +549,7 @@ object ToolExecutionManager {
         invocations: List<ToolInvocation>,
         context: Context,
         toolHandler: AIToolHandler,
-        packageManager: PackageManager,
+        packageManager: PackageManager?,
         collector: StreamCollector<String>,
         toolExposureMode: ToolExposureMode = ToolExposureMode.FULL,
         callerName: String? = null,
@@ -565,21 +618,39 @@ object ToolExecutionManager {
             }
         }
 
+        // 2b. Common-base catalog gate before ASK, so disabled tools never look granted.
+        val catalogPermittedInvocations = mutableListOf<ToolInvocation>()
+        val catalogDeniedResults = mutableListOf<ToolResult>()
+        for (invocation in roleCardPermittedInvocations) {
+            val catalogDenied = CommonBaseExecutionGuard.catalogResultFor(invocation.tool)
+            if (catalogDenied == null) {
+                catalogPermittedInvocations.add(invocation)
+            } else {
+                catalogDeniedResults.add(catalogDenied)
+                toolHandler.notifyToolExecutionResult(invocation.tool, catalogDenied)
+                val toolResultStatusContent =
+                    ConversationMarkupManager.formatToolResultForMessage(catalogDenied)
+                collector.emit(ensureEndsWithNewline(toolResultStatusContent))
+            }
+        }
+
         // 3. Hook 拦截与权限检查
         val permittedInvocations = mutableListOf<ToolInvocation>()
+        val invocationConfirmations = mutableListOf<Boolean>()
         val hookDeniedResults = mutableListOf<ToolResult>()
         val permissionDeniedResults = mutableListOf<ToolResult>()
-        for (invocation in roleCardPermittedInvocations) {
+        for (invocation in catalogPermittedInvocations) {
             toolHandler.notifyToolCallRequested(invocation.tool)
             val interceptionTool = resolveToolTarget(invocation.tool).tool
             when (val interception = toolHandler.checkToolInterception(interceptionTool)) {
                 AIToolHookDecision.Allow -> {
-                    val (hasPermission, errorResult) =
-                        checkToolPermission(toolHandler, invocation, toolExposureMode)
-                    if (hasPermission) {
+                    val permissionOutcome =
+                        checkToolPermissionOutcome(toolHandler, invocation, toolExposureMode)
+                    if (permissionOutcome.granted) {
                         permittedInvocations.add(invocation)
+                        invocationConfirmations.add(permissionOutcome.explicitUserConfirmation)
                     } else {
-                        errorResult?.let {
+                        permissionOutcome.errorResult?.let {
                             permissionDeniedResults.add(it)
                             val toolResultStatusContent =
                                 ConversationMarkupManager.formatToolResultForMessage(it)
@@ -606,17 +677,22 @@ object ToolExecutionManager {
 
         val injectedInvocations =
             if (callerName.isNullOrBlank() && callerChatId.isNullOrBlank() && callerCardId.isNullOrBlank()) {
-                permittedInvocations
+                permittedInvocations.zip(invocationConfirmations)
             } else {
-                val jsPackageNames = packageManager.getAvailablePackages().keys
-                permittedInvocations.map { invocation ->
+                val jsPackageNames =
+                    CommonBasePackageLookup.availableNames {
+                        requireNotNull(packageManager) {
+                            "PackageManager is required to inject package call context outside the common-base profile"
+                        }.getAvailablePackages().keys
+                    }
+                permittedInvocations.mapIndexed { index, invocation ->
                     injectPackageCallContext(
                         invocation = invocation,
                         jsPackageNames = jsPackageNames,
                         callerName = callerName,
                         callerChatId = callerChatId,
                         callerCardId = callerCardId
-                    )
+                    ) to invocationConfirmations[index]
                 }
             }
 
@@ -628,7 +704,7 @@ object ToolExecutionManager {
         )
         val (parallelInvocations, serialInvocations) = injectedInvocations.partition {
             parallelizableToolNames.contains(
-                it.tool.name
+                it.first.tool.name
             )
         }
 
@@ -636,7 +712,7 @@ object ToolExecutionManager {
         val executionResults = ConcurrentHashMap<ToolInvocation, ToolResult>()
 
         // 启动并行工具
-        val parallelJobs = parallelInvocations.map { invocation ->
+        val parallelJobs = parallelInvocations.map { (invocation, confirmed) ->
             async {
                 val result =
                     executeAndEmitTool(
@@ -644,21 +720,23 @@ object ToolExecutionManager {
                         toolHandler = toolHandler,
                         packageManager = packageManager,
                         collector = collector,
-                        runtimeContext = toolRuntimeContext
+                        runtimeContext =
+                            toolRuntimeContext.copy(explicitUserConfirmation = confirmed)
                     )
                 executionResults[invocation] = result
             }
         }
 
         // 顺序执行串行工具
-        for (invocation in serialInvocations) {
+        for ((invocation, confirmed) in serialInvocations) {
             val result =
                 executeAndEmitTool(
                     invocation = invocation,
                     toolHandler = toolHandler,
                     packageManager = packageManager,
                     collector = collector,
-                    runtimeContext = toolRuntimeContext
+                    runtimeContext =
+                        toolRuntimeContext.copy(explicitUserConfirmation = confirmed)
                 )
             executionResults[invocation] = result
         }
@@ -667,11 +745,12 @@ object ToolExecutionManager {
         parallelJobs.awaitAll()
 
         // 6. 按原始顺序重新排序结果
-        val orderedAggregated = injectedInvocations.mapNotNull { executionResults[it] }
+        val orderedAggregated = injectedInvocations.mapNotNull { executionResults[it.first] }
 
         // 7. 组合所有结果并返回
         toolExposureDeniedResults +
             roleCardDeniedResults +
+            catalogDeniedResults +
             hookDeniedResults +
             permissionDeniedResults +
             orderedAggregated
@@ -683,7 +762,7 @@ object ToolExecutionManager {
     private suspend fun executeAndEmitTool(
         invocation: ToolInvocation,
         toolHandler: AIToolHandler,
-        packageManager: PackageManager,
+        packageManager: PackageManager?,
         collector: StreamCollector<String>,
         runtimeContext: ToolRuntimeContext
     ): ToolResult {
@@ -692,6 +771,15 @@ object ToolExecutionManager {
 
         return withContext(toolRuntimeContextThreadLocal.asContextElement(runtimeContext)) {
             try {
+                val restricted = CommonBaseExecutionGuard.resultFor(invocation.tool)
+                if (restricted != null) {
+                    val toolResultStatusContent =
+                        ConversationMarkupManager.formatToolResultForMessage(restricted)
+                    collector.emit(ensureEndsWithNewline(toolResultStatusContent))
+                    toolHandler.notifyToolExecutionResult(invocation.tool, restricted)
+                    return@withContext restricted
+                }
+
                 val executor = toolHandler.getToolExecutorOrActivate(toolName)
                 if (executor == null) {
                     // 如果仍然为 null，则构建错误消息
@@ -760,9 +848,15 @@ object ToolExecutionManager {
      */
     private suspend fun buildToolNotAvailableErrorMessage(
         toolName: String,
-        packageManager: PackageManager,
+        packageManager: PackageManager?,
         toolHandler: AIToolHandler
     ): String {
+        if (CommonBaseProfile.isEnabled) {
+            return "Tool '${toolName}' is unavailable or does not exist. Package, MCP, script, and terminal tools are not activated in the common base profile."
+        }
+        val resolvedPackageManager = requireNotNull(packageManager) {
+            "PackageManager is required to diagnose unavailable tools outside the common-base profile"
+        }
         return when {
             toolName.contains('.') && !toolName.contains(':') -> {
                 val parts = toolName.split('.', limit = 2)
@@ -773,8 +867,8 @@ object ToolExecutionManager {
                 val parts = toolName.split(':', limit = 2)
                 val packName = parts[0]
                 val toolNamePart = parts.getOrNull(1) ?: ""
-                val isJsPackageAvailable = packageManager.getAvailablePackages().containsKey(packName)
-                val isMcpServerAvailable = packageManager.getAvailableServerPackages().containsKey(packName)
+                val isJsPackageAvailable = resolvedPackageManager.getAvailablePackages().containsKey(packName)
+                val isMcpServerAvailable = resolvedPackageManager.getAvailableServerPackages().containsKey(packName)
                 val isAvailable = isJsPackageAvailable || isMcpServerAvailable
 
                 if (!isAvailable) {
@@ -782,7 +876,7 @@ object ToolExecutionManager {
                 } else {
                     // 包存在，检查是否已激活（通过检查该包的任何工具是否已注册）
                     val packageTools =
-                        packageManager.getPackageTools(packName)?.tools ?: emptyList()
+                        resolvedPackageManager.getPackageTools(packName)?.tools ?: emptyList()
                     val isAdviceTool = packageTools.any { it.advice && it.name == toolNamePart }
                     val isPackageActivated = packageTools
                         .filter { !it.advice }
@@ -802,7 +896,7 @@ object ToolExecutionManager {
 
             else -> {
                 // 检查是否直接把包名当作工具名调用了
-                val isPackageName = packageManager.getAvailablePackages().containsKey(toolName)
+                val isPackageName = resolvedPackageManager.getAvailablePackages().containsKey(toolName)
                 if (isPackageName) {
                     "Error: '$toolName' is a tool package, not a tool. Please use the 'use_package' tool with package name '$toolName' to activate this package before using its tools."
                 } else {

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 import java.util.UUID
 
 enum class RouteRuntime {
@@ -156,6 +157,9 @@ object AppRouterGateway {
         args: Map<String, Any?> = emptyMap(),
         source: RouteEntrySource = RouteEntrySource.SCRIPT
     ) {
+        if (!CommonBaseNavigationPolicy.allowsRoute(routeId = routeId)) {
+            return
+        }
         navigateHandler?.invoke(routeId, args, source)
     }
 
@@ -164,6 +168,9 @@ object AppRouterGateway {
         args: Map<String, Any?> = emptyMap(),
         source: RouteEntrySource = RouteEntrySource.SCRIPT
     ) {
+        if (!CommonBaseNavigationPolicy.allowsRoute(routeId = routeId)) {
+            return
+        }
         resetHandler?.invoke(routeId, args, source)
     }
 }

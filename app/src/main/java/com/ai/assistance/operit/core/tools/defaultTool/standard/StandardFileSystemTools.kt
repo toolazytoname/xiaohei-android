@@ -279,6 +279,12 @@ open class StandardFileSystemTools(protected val context: Context) {
         maxResults: Int
     ): Pair<List<RipgrepBlock>, Int> =
         withContext(Dispatchers.IO) {
+        // Store never packages ripgrep. Refuse before loading its JNI object even if a
+        // future internal caller bypasses the public common tool catalog.
+        check(!com.ai.assistance.operit.core.commonbase.CommonBaseProfile.storeNativeTrim) {
+            "Native file search is not available in the Xiaohei store edition."
+        }
+
             val rawResult =
                 NativeRipgrep.searchJson(
                     path = path,

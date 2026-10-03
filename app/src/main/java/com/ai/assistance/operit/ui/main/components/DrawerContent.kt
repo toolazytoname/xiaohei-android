@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.core.tools.system.AndroidPermissionLevel
@@ -159,23 +160,49 @@ fun DrawerContent(
         val quickActionItems = remember {
                 setOf(NavItem.Packages, NavItem.Workflow)
         }
-        val packageManager = remember(context) {
-                PackageManager.getInstance(context, AIToolHandler.getInstance(context))
+        val showPackageShortcut =
+                CommonBaseNavigationPolicy.allowsNavItemRoute(navItemRoute = NavItem.Packages.route)
+        val showWorkflowShortcut =
+                CommonBaseNavigationPolicy.allowsNavItemRoute(navItemRoute = NavItem.Workflow.route)
+        val showShizukuShortcut =
+                CommonBaseNavigationPolicy.allowsNavItemRoute(
+                        navItemRoute = NavItem.ShizukuCommands.route
+                )
+        val packageManager = remember(context, showPackageShortcut) {
+                if (showPackageShortcut) {
+                        PackageManager.getInstance(context, AIToolHandler.getInstance(context))
+                } else {
+                        null
+                }
         }
-        val workflowRepository = remember(context) { WorkflowRepository(context) }
+        val workflowRepository = remember(context, showWorkflowShortcut) {
+                if (showWorkflowShortcut) {
+                        WorkflowRepository(context)
+                } else {
+                        null
+                }
+        }
         val activePackageCount by
-                produceState(initialValue = 0, selectedRouteId) {
-                        value =
-                                withContext(Dispatchers.IO) {
-                                        packageManager.getEnabledPackageNames().size
-                                }
+                produceState(initialValue = 0, selectedRouteId, showPackageShortcut, packageManager) {
+                        if (!showPackageShortcut || packageManager == null) {
+                                value = 0
+                        } else {
+                                value =
+                                        withContext(Dispatchers.IO) {
+                                                packageManager.getEnabledPackageNames().size
+                                        }
+                        }
                 }
         val workflowCount by
-                produceState(initialValue = 0, selectedRouteId) {
-                        value =
-                                withContext(Dispatchers.IO) {
-                                        workflowRepository.getAllWorkflows().getOrDefault(emptyList()).size
-                                }
+                produceState(initialValue = 0, selectedRouteId, showWorkflowShortcut, workflowRepository) {
+                        if (!showWorkflowShortcut || workflowRepository == null) {
+                                value = 0
+                        } else {
+                                value =
+                                        withContext(Dispatchers.IO) {
+                                                workflowRepository.getAllWorkflows().getOrDefault(emptyList()).size
+                                        }
+                        }
                 }
         val permissionStatus by
                 produceState(
@@ -184,15 +211,23 @@ fun DrawerContent(
                                         badgeTextResId = R.string.sidebar_status_normal
                                 ),
                         selectedRouteId,
-                        preferredPermissionLevel
+                        preferredPermissionLevel,
+                        showShizukuShortcut
                 ) {
-                        value =
-                                withContext(Dispatchers.IO) {
-                                        resolveSidebarPermissionStatus(
-                                                context = context,
-                                                preferredPermissionLevel = preferredPermissionLevel
+                        if (!showShizukuShortcut) {
+                                value =
+                                        SidebarPermissionStatus(
+                                                badgeTextResId = R.string.sidebar_status_normal
                                         )
-                                }
+                        } else {
+                                value =
+                                        withContext(Dispatchers.IO) {
+                                                resolveSidebarPermissionStatus(
+                                                        context = context,
+                                                        preferredPermissionLevel = preferredPermissionLevel
+                                                )
+                                        }
+                        }
                 }
         val primaryNavItems =
                 remember(navItems) {
@@ -253,6 +288,9 @@ fun DrawerContent(
                                 activePackageCount = activePackageCount,
                                 workflowCount = workflowCount,
                                 permissionStatus = permissionStatus,
+                                showPackageShortcut = showPackageShortcut,
+                                showWorkflowShortcut = showWorkflowShortcut,
+                                showShizukuShortcut = showShizukuShortcut,
                                 onNavItemClick = handleNavItemClick,
                                 onNavigationEntryClick = handleNavigationEntryClick
                         )
@@ -458,6 +496,9 @@ private fun NewSidebarTopContent(
         activePackageCount: Int,
         workflowCount: Int,
         permissionStatus: SidebarPermissionStatus,
+        showPackageShortcut: Boolean,
+        showWorkflowShortcut: Boolean,
+        showShizukuShortcut: Boolean,
         onNavItemClick: (NavItem) -> Unit,
         onNavigationEntryClick: (NavigationEntrySpec) -> Unit
 ) {
@@ -472,12 +513,14 @@ private fun NewSidebarTopContent(
 
         Spacer(modifier = Modifier.height(14.dp))
 
+        if (showPackageShortcut || showShizukuShortcut || showWorkflowShortcut) {
         Row(
                 modifier =
                         Modifier.fillMaxWidth()
                                 .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+                if (showPackageShortcut) {
                 SidebarQuickActionCard(
                         modifier = Modifier.weight(1f),
                         icon = NavItem.Packages.icon,
@@ -487,6 +530,8 @@ private fun NewSidebarTopContent(
                         appearance = appearance,
                         onClick = { onNavItemClick(NavItem.Packages) }
                 )
+                }
+                if (showShizukuShortcut) {
                 SidebarQuickActionCard(
                         modifier = Modifier.weight(1f),
                         icon = NavItem.ShizukuCommands.icon,
@@ -496,6 +541,8 @@ private fun NewSidebarTopContent(
                         appearance = appearance,
                         onClick = { onNavItemClick(NavItem.ShizukuCommands) }
                 )
+                }
+                if (showWorkflowShortcut) {
                 SidebarQuickActionCard(
                         modifier = Modifier.weight(1f),
                         icon = NavItem.Workflow.icon,
@@ -505,9 +552,11 @@ private fun NewSidebarTopContent(
                         appearance = appearance,
                         onClick = { onNavItemClick(NavItem.Workflow) }
                 )
+                }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
+        }
 
         Text(
                 text = stringResource(id = R.string.nav_group_ai_features),

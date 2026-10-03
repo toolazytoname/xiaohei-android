@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.chat.AIForegroundService
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.data.model.PromptFunctionType
 import com.ai.assistance.operit.ui.features.chat.components.AttachmentChip
 import com.ai.assistance.operit.ui.floating.FloatContext
@@ -75,7 +76,12 @@ fun FloatingChatWindowInputControls(
     floatContext: FloatContext,
     viewModel: FloatingChatWindowModeViewModel
 ) {
-    if (floatContext.showAttachmentPanel && !floatContext.showInputDialog) {
+    val hasFloatingAttachmentOptions =
+        CommonBaseUiResiduePolicy.hasFloatingWindowAttachmentOptions()
+    if (floatContext.showAttachmentPanel &&
+        !floatContext.showInputDialog &&
+        hasFloatingAttachmentOptions
+    ) {
         AttachmentPanelOverlay(floatContext, viewModel)
     }
     if (!floatContext.showInputDialog && floatContext.onSendMessage != null) {
@@ -94,6 +100,8 @@ private fun BottomInputBar(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val hasContent = floatContext.userMessage.isNotBlank()
+    val hasFloatingAttachmentOptions =
+        CommonBaseUiResiduePolicy.hasFloatingWindowAttachmentOptions()
     var isInputFocused by remember { mutableStateOf(false) }
     
     // 检测 AI 是否正在处理消息 - 使用 chatService 的 isLoading 状态
@@ -180,38 +188,40 @@ private fun BottomInputBar(
                 shape = RoundedCornerShape(12.dp)
             )
             
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            // 附件按钮 (+)
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (floatContext.showAttachmentPanel)
-                            MaterialTheme.colorScheme.primary
+            if (hasFloatingAttachmentOptions) {
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 附件按钮 (+)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (floatContext.showAttachmentPanel)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .clickable {
+                            focusManager.clearFocus(force = true)
+                            keyboardController?.hide()
+                            floatContext.onInputFocusRequest?.invoke(false)
+                            viewModel.toggleAttachmentPanel()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.floating_add_attachment),
+                        tint = if (floatContext.showAttachmentPanel)
+                            MaterialTheme.colorScheme.onPrimary
                         else
-                            MaterialTheme.colorScheme.surfaceVariant
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
                     )
-                    .clickable {
-                        focusManager.clearFocus(force = true)
-                        keyboardController?.hide()
-                        floatContext.onInputFocusRequest?.invoke(false)
-                        viewModel.toggleAttachmentPanel()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.floating_add_attachment),
-                    tint = if (floatContext.showAttachmentPanel)
-                        MaterialTheme.colorScheme.onPrimary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
+                }
             }
-            
+
             Spacer(modifier = Modifier.width(8.dp))
             
             // 发送/取消按钮
@@ -268,35 +278,53 @@ private fun AttachmentPanelOverlay(
     floatContext: FloatContext,
     viewModel: FloatingChatWindowModeViewModel
 ) {
+    val requestAttachment: (String) -> Unit = { token ->
+        if (CommonBaseUiResiduePolicy.allowsAttachmentToken(token)) {
+            floatContext.onAttachmentRequest?.invoke(token)
+        }
+    }
+
     FloatingAttachmentPanel(
         visible = floatContext.showAttachmentPanel,
         onAttachScreenContent = {
+            if (!CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+                return@FloatingAttachmentPanel
+            }
             floatContext.coroutineScope.launch {
-                floatContext.onAttachmentRequest?.invoke("screen_capture")
-            delay(500)
+                requestAttachment("screen_capture")
+                delay(500)
                 floatContext.showAttachmentPanel = false
             }
         },
         onAttachNotifications = {
+            if (!CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+                return@FloatingAttachmentPanel
+            }
             floatContext.coroutineScope.launch {
-            floatContext.onAttachmentRequest?.invoke("notifications_capture")
-            delay(500)
+                requestAttachment("notifications_capture")
+                delay(500)
                 floatContext.showAttachmentPanel = false
             }
         },
         onAttachLocation = {
+            if (!CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+                return@FloatingAttachmentPanel
+            }
             floatContext.coroutineScope.launch {
-                floatContext.onAttachmentRequest?.invoke("location_capture")
-            delay(500)
+                requestAttachment("location_capture")
+                delay(500)
                 floatContext.showAttachmentPanel = false
             }
         },
         onAttachScreenOcr = {
+            if (!CommonBaseUiResiduePolicy.allowsScreenOcr()) {
+                return@FloatingAttachmentPanel
+            }
             floatContext.onModeChange(FloatingMode.SCREEN_OCR)
             floatContext.showAttachmentPanel = false
         },
         onAttachPackage = { packageName ->
-            floatContext.onAttachmentRequest?.invoke("package_attach:$packageName")
+            requestAttachment("package_attach:$packageName")
         },
         onDismiss = { floatContext.showAttachmentPanel = false }
     )

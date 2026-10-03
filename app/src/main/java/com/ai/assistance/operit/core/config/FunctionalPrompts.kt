@@ -2,6 +2,7 @@ package com.ai.assistance.operit.core.config
 
 import com.ai.assistance.operit.core.avatar.common.state.AvatarCustomMoodDefinition
 import com.ai.assistance.operit.core.avatar.common.state.AvatarMoodTypes
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 
 /**
  * A centralized repository for system prompts used across various functional services.
@@ -614,6 +615,13 @@ $toolList
     """
 
     fun uiControllerPrompt(useEnglish: Boolean): String {
+        if (CommonBaseProfile.isEnabled) {
+            return if (useEnglish) {
+                "UI automation is not available in the common base profile."
+            } else {
+                "共同基础版不提供 UI 自动化。"
+            }
+        }
         return if (useEnglish) UI_CONTROLLER_PROMPT else UI_CONTROLLER_PROMPT_CN
     }
 
@@ -757,6 +765,13 @@ $toolList
      """
 
     fun uiAutomationAgentPrompt(useEnglish: Boolean): String {
+        if (CommonBaseProfile.isEnabled) {
+            return if (useEnglish) {
+                "UI automation is not available in the common base profile."
+            } else {
+                "共同基础版不提供 UI 自动化。"
+            }
+        }
         return if (useEnglish) UI_AUTOMATION_AGENT_PROMPT_EN else UI_AUTOMATION_AGENT_PROMPT
     }
 

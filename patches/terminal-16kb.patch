@@ -1,0 +1,19 @@
+diff --git a/src/main/jni/CMakeLists.txt b/src/main/jni/CMakeLists.txt
+index b9ea7a3..6d1c7d6 100644
+--- a/src/main/jni/CMakeLists.txt
++++ b/src/main/jni/CMakeLists.txt
+@@ -4,4 +4,11 @@ project("pty")
+ 
+ add_library(pty SHARED pty.c)
+ 
+-target_link_libraries(pty log) 
+\ No newline at end of file
++target_link_libraries(pty log)
++
++if(ANDROID)
++    target_link_options(pty PRIVATE
++            "-Wl,-z,max-page-size=16384"
++            "-Wl,-z,common-page-size=16384"
++    )
++endif() 
+\ No newline at end of file

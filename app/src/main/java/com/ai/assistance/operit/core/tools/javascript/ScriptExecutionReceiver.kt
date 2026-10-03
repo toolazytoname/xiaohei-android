@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.OperitPaths
+import com.ai.assistance.operit.core.commonbase.CommonBaseCapabilityPolicy
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +20,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
+import org.json.JSONObject
 
 class ScriptExecutionReceiver : BroadcastReceiver() {
 
@@ -44,6 +47,26 @@ class ScriptExecutionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_EXECUTE_JS) {
+            return
+        }
+
+        if (CommonBaseProfile.isEnabled) {
+            val reason = CommonBaseCapabilityPolicy.scriptBroadcastDeniedReason()
+            AppLogger.w(TAG, reason)
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val resultFilePath = intent.getStringExtra(EXTRA_RESULT_FILE_PATH)
+                    if (!resultFilePath.isNullOrBlank()) {
+                        val payload = JSONObject()
+                        payload.put("success", false)
+                        payload.put("error", reason)
+                        File(resultFilePath).writeText(payload.toString())
+                    }
+                } finally {
+                    pendingResult.finish()
+                }
+            }
             return
         }
 

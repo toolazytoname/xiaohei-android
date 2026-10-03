@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.OperitPaths
@@ -52,13 +53,15 @@ class AttachmentDelegate(private val context: Context, private val toolHandler: 
 
     /** Adds multiple attachments in one shot (dedup by filePath) */
     fun addAttachments(attachments: List<AttachmentInfo>): List<AttachmentInfo> {
-        if (attachments.isEmpty()) return emptyList()
+        val accepted =
+                attachments.filter { CommonBaseUiResiduePolicy.allowsAttachmentToken(it.filePath) }
+        if (accepted.isEmpty()) return emptyList()
         synchronized(attachmentListLock) {
             val currentList = _attachments.value
             val existingPaths = currentList.mapTo(mutableSetOf()) { it.filePath }
             val usedFileNames = currentList.mapTo(mutableSetOf()) { it.fileName }
             val toAdd =
-                    attachments.mapNotNull { incoming ->
+                    accepted.mapNotNull { incoming ->
                         if (!existingPaths.add(incoming.filePath)) {
                             null
                         } else {
@@ -189,6 +192,9 @@ class AttachmentDelegate(private val context: Context, private val toolHandler: 
     /** Handles a file or image attachment selected by the user 确保在IO线程执行所有文件操作 */
     suspend fun handleAttachment(filePath: String) =
             withContext(Dispatchers.IO) {
+                if (!CommonBaseUiResiduePolicy.allowsAttachmentToken(filePath)) {
+                    return@withContext
+                }
                 try {
                     when {
                         filePath == "screen_capture" -> {
@@ -604,7 +610,10 @@ class AttachmentDelegate(private val context: Context, private val toolHandler: 
     /** Update attachments with a new list */
     fun updateAttachments(newAttachments: List<AttachmentInfo>) {
         synchronized(attachmentListLock) {
-            _attachments.value = newAttachments
+            _attachments.value =
+                    newAttachments.filter {
+                        CommonBaseUiResiduePolicy.allowsAttachmentToken(it.filePath)
+                    }
         }
     }
 
@@ -614,6 +623,9 @@ class AttachmentDelegate(private val context: Context, private val toolHandler: 
      */
     suspend fun captureScreenContent() =
             withContext(Dispatchers.IO) {
+                if (!CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+                    return@withContext
+                }
                 try {
                     val screenshotTool = AITool(name = "capture_screenshot", parameters = emptyList())
                     val screenshotResult = toolHandler.executeTool(screenshotTool)
@@ -686,6 +698,9 @@ class AttachmentDelegate(private val context: Context, private val toolHandler: 
     /** 获取设备当前通知并作为附件添加到消息 使用get_notifications AITool获取通知数据 确保在IO线程中执行 */
     suspend fun captureNotifications(limit: Int = 10) =
             withContext(Dispatchers.IO) {
+                if (!CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+                    return@withContext
+                }
                 try {
                     // 创建工具参数
                     val toolParams =
@@ -731,6 +746,9 @@ class AttachmentDelegate(private val context: Context, private val toolHandler: 
     /** 获取设备当前位置并作为附件添加到消息 使用get_device_location AITool获取位置数据 确保在IO线程中执行 */
     suspend fun captureLocation(highAccuracy: Boolean = true) =
             withContext(Dispatchers.IO) {
+                if (!CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+                    return@withContext
+                }
                 try {
                     // 创建工具参数
                     val toolParams =

@@ -20,6 +20,7 @@ import com.ai.assistance.operit.api.chat.ChatRuntimeHolder
 import com.ai.assistance.operit.api.chat.ChatRuntimeSlot
 import com.ai.assistance.operit.api.chat.EnhancedAIService
 import com.ai.assistance.operit.core.chat.AIMessageManager
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.FileOperationData
 import com.ai.assistance.operit.data.collects.ApiProviderConfigs
@@ -1726,6 +1727,9 @@ class ChatViewModel(private val context: Context) : ViewModel() {
     // 附件相关方法
     /** Handles a file or image attachment selected by the user */
     fun handleAttachment(filePath: String) {
+        if (!CommonBaseUiResiduePolicy.allowsAttachmentToken(filePath)) {
+            return
+        }
         viewModelScope.launch {
             try {
                 // 获取当前会话ID并绑定
@@ -1797,6 +1801,9 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     /** Captures the current screen content and attaches it to the message */
     fun captureScreenContent() {
+        if (!CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+            return
+        }
         viewModelScope.launch {
             try {
                 // 获取当前会话ID并绑定
@@ -1828,6 +1835,9 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     /** 获取设备当前通知数据并添加为附件 */
     fun captureNotifications() {
+        if (!CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+            return
+        }
         viewModelScope.launch {
             try {
                 // 获取当前会话ID并绑定
@@ -1859,6 +1869,9 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     /** 获取设备当前位置数据并添加为附件 */
     fun captureLocation() {
+        if (!CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+            return
+        }
         viewModelScope.launch {
             try {
                 // 获取当前会话ID并绑定
@@ -2185,6 +2198,12 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     // WebView控制方法
     fun toggleWebView() {
+        if (!CommonBaseUiResiduePolicy.allowsWorkspace()) {
+            workspaceOpenJob?.cancel()
+            _isWorkspacePreparing.value = false
+            _showWebView.value = false
+            return
+        }
         if (_showWebView.value) {
             workspaceOpenJob?.cancel()
             _isWorkspacePreparing.value = false
@@ -2722,6 +2741,9 @@ class ChatViewModel(private val context: Context) : ViewModel() {
     }
 
     private fun openAiComputerForTerminalSession() {
+        if (!CommonBaseUiResiduePolicy.allowsAiComputer()) {
+            return
+        }
         if (_showWebView.value) {
             _showWebView.value = false
             AppLogger.d(TAG, "工作区已关闭（由于打开后台命令终端）")
@@ -2863,6 +2885,10 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     // AI电脑控制方法
     fun toggleAiComputer() {
+        if (!CommonBaseUiResiduePolicy.allowsAiComputer()) {
+            _showAiComputer.value = false
+            return
+        }
         viewModelScope.launch {
             // 如果要显示AI电脑，先关闭工作区
             if (!_showAiComputer.value && _showWebView.value) {

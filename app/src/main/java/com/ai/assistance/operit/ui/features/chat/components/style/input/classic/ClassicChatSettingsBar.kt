@@ -88,6 +88,7 @@ import java.text.DecimalFormat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 
 @Composable
 fun ClassicChatSettingsBar(
@@ -697,6 +698,7 @@ fun ClassicChatSettingsBar(
                             )
                             }
 
+                            if (CommonBaseNavigationPolicy.allowsScreenType(typeName = "Packages")) {
                             ClassicSettingsFoldSection(
                                 title = stringResource(R.string.agent_menu_plugins),
                                 value = "$pluginEnabledCount/$pluginToggleCount",
@@ -721,6 +723,7 @@ fun ClassicChatSettingsBar(
                                         showMenu = false
                                     }
                                 )
+                            }
                             }
                             }
                         }

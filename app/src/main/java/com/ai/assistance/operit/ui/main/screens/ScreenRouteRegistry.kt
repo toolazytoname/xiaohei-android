@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Token
 import androidx.compose.material.icons.filled.VideoSettings
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 import com.ai.assistance.operit.ui.common.NavItem
 import com.ai.assistance.operit.ui.main.navigation.NavigationEntrySpec
 import com.ai.assistance.operit.ui.main.navigation.NavigationSurface
@@ -380,7 +381,10 @@ object ScreenRouteRegistry {
             .toMap()
 
     fun hostRouteSpecs(context: Context): List<RouteSpec> =
-        nativeRouteIds.map { routeId ->
+        nativeRouteIds.mapNotNull { routeId ->
+            if (!CommonBaseNavigationPolicy.allowsRoute(routeId = routeId)) {
+                return@mapNotNull null
+            }
             val screen = directScreenByRouteId[routeId]
             hostSpec(
                 routeId = routeId,
@@ -392,7 +396,9 @@ object ScreenRouteRegistry {
     fun mainSidebarEntries(context: Context): List<NavigationEntrySpec> =
         hostEntryDefinitions
             .filter { definition ->
-                definition.surface != null && definition.surface != NavigationSurface.TOOLBOX
+                definition.surface != null &&
+                    definition.surface != NavigationSurface.TOOLBOX &&
+                    CommonBaseNavigationPolicy.allowsRoute(routeId = routeIdOf(definition.screen))
             }
             .map { definition ->
             definition.toNavigationEntry(context)
@@ -400,7 +406,10 @@ object ScreenRouteRegistry {
 
     fun toolboxEntries(context: Context): List<NavigationEntrySpec> =
         hostEntryDefinitions
-            .filter { definition -> definition.surface == NavigationSurface.TOOLBOX }
+            .filter { definition ->
+                definition.surface == NavigationSurface.TOOLBOX &&
+                    CommonBaseNavigationPolicy.allowsRoute(routeId = routeIdOf(definition.screen))
+            }
             .map { definition ->
             definition.toNavigationEntry(context)
             }
@@ -430,14 +439,23 @@ object ScreenRouteRegistry {
     }
 
     fun screenFromEntry(entry: RouteEntry): Screen? {
+        if (!CommonBaseNavigationPolicy.allowsRoute(routeId = entry.routeId)) {
+            return null
+        }
         val directScreen = entry.args[INTERNAL_NATIVE_SCREEN_KEY] as? Screen
         if (directScreen != null) {
+            if (!CommonBaseNavigationPolicy.allowsScreenType(typeName = directScreen.javaClass.simpleName)) {
+                return null
+            }
             return directScreen
         }
         return buildScreen(entry.routeId, entry.args)
     }
 
     fun buildScreen(routeId: String, args: Map<String, Any?>): Screen? {
+        if (!CommonBaseNavigationPolicy.allowsRoute(routeId = routeId)) {
+            return null
+        }
         if (args.isEmpty()) {
             directScreenByRouteId[routeId]?.let { return it }
         }

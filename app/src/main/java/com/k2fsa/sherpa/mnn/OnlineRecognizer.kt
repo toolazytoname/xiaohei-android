@@ -143,7 +143,9 @@ class OnlineRecognizer(
 
     companion object {
         init {
-            System.loadLibrary("sherpa-mnn-jni")
+            if (!com.ai.assistance.operit.core.commonbase.CommonBaseProfile.storeNativeTrim) {
+                System.loadLibrary("sherpa-mnn-jni")
+            }
         }
     }
 }

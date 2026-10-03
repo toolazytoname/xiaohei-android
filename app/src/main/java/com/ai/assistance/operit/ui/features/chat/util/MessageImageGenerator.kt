@@ -222,7 +222,7 @@ object MessageImageGenerator {
                                                 ) {
                                                     // Logo
                                                     Image(
-                                                        painter = painterResource(id = com.ai.assistance.operit.R.drawable.ic_launcher_simple_foreground),
+                                                        painter = painterResource(id = com.ai.assistance.operit.R.drawable.ic_launcher_xiaohei_foreground),
                                                         contentDescription = "Operit Logo",
                                                         modifier = Modifier.size(48.dp)
                                                     )

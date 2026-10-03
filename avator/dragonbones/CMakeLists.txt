@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project("dragonbones_native")
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/operit_git_source.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/xiaohei_page_size.cmake")
 
 # The module relocation removed ignored vendored sources, so clean builds must
 # populate the same runtime snapshot through the repository's archive helper.
@@ -58,5 +59,4 @@ target_link_libraries(
     ${android-lib}
 )
 
-# 添加 16KB 页面大小支持（Android 15+ 要求）
-target_link_options(dragonbones_native PRIVATE "-Wl,-z,max-page-size=16384")
+xiaohei_apply_16kb_page_size(dragonbones_native)

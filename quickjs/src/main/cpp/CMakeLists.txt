@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project(quickjsjni)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/operit_git_source.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/xiaohei_page_size.cmake")
 
 operit_prepare_git_source(
     QUICKJS_DIR
@@ -79,4 +80,4 @@ target_link_libraries(
     m
 )
 
-target_link_options(quickjsjni PRIVATE "-Wl,-z,max-page-size=16384")
+xiaohei_apply_16kb_page_size(quickjsjni)

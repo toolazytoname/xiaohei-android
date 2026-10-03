@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 import com.ai.assistance.operit.ui.common.NavItem
 import com.ai.assistance.operit.ui.features.about.screens.AboutScreen
 import com.ai.assistance.operit.ui.features.assistant.screens.AssistantConfigScreen
@@ -147,7 +148,11 @@ sealed class Screen(
                     onNavigateToModelConfig = { navigateTo(ModelConfig) },
                     onNavigateToOnboardingModelConfig = { navigateTo(ModelConfigOnboarding) },
                     onNavigateToModelPrompts = { navigateTo(ModelPromptsSettings) },
-                    onNavigateToPackageManager = { navigateTo(Packages) },
+                    onNavigateToPackageManager = {
+                        if (CommonBaseNavigationPolicy.allowsScreenType(typeName = "Packages")) {
+                            navigateTo(Packages)
+                        }
+                    },
                     onLoading = onLoading,
                     onError = onError,
                     onGestureConsumed = onGestureConsumed

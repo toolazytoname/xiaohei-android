@@ -1,5 +1,7 @@
 package com.ai.assistance.operit.ui.features.assistant.components
 
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -87,9 +89,10 @@ fun VoiceAutoAttachGrid(
     var editingItemId by remember { mutableStateOf<String?>(null) }
     var createDialogVisible by remember { mutableStateOf(false) }
 
+    val visibleItems = items.filter { voiceAutoAttachAllowed(it.type) }
     val usedTypes = remember(items) { items.map { it.type }.toSet() }
     val missingTypes = remember(usedTypes) {
-        WakeWordPreferences.VoiceAutoAttachType.entries.filterNot { usedTypes.contains(it) }
+        WakeWordPreferences.VoiceAutoAttachType.entries.filter { voiceAutoAttachAllowed(it) && !usedTypes.contains(it) }
     }
 
     LazyVerticalGrid(
@@ -101,7 +104,7 @@ fun VoiceAutoAttachGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         userScrollEnabled = false
     ) {
-        items(items, key = { it.id }) { item ->
+        items(visibleItems, key = { it.id }) { item ->
             VoiceAutoAttachTile(
                 icon = voiceAutoAttachTypeIcon(item.type),
                 title = voiceAutoAttachTypeTitle(item.type),
@@ -120,7 +123,7 @@ fun VoiceAutoAttachGrid(
     }
 
     val editingItem = remember(editingItemId, items) {
-        editingItemId?.let { id -> items.firstOrNull { it.id == id } }
+        editingItemId?.let { id -> visibleItems.firstOrNull { it.id == id } }
     }
     if (editingItem != null) {
         VoiceAutoAttachItemDialog(
@@ -413,4 +416,11 @@ private fun voiceAutoAttachTypeIcon(type: WakeWordPreferences.VoiceAutoAttachTyp
         WakeWordPreferences.VoiceAutoAttachType.LOCATION -> Icons.Filled.LocationOn
         WakeWordPreferences.VoiceAutoAttachType.TIME -> Icons.Filled.Schedule
     }
+}
+
+private fun voiceAutoAttachAllowed(type: WakeWordPreferences.VoiceAutoAttachType): Boolean = when (type) {
+    WakeWordPreferences.VoiceAutoAttachType.SCREEN_OCR -> CommonBaseUiResiduePolicy.allowsScreenOcr()
+    WakeWordPreferences.VoiceAutoAttachType.NOTIFICATIONS -> CommonBaseUiResiduePolicy.allowsNotificationAttach()
+    WakeWordPreferences.VoiceAutoAttachType.LOCATION -> CommonBaseUiResiduePolicy.allowsLocationAttach()
+    WakeWordPreferences.VoiceAutoAttachType.TIME -> true
 }

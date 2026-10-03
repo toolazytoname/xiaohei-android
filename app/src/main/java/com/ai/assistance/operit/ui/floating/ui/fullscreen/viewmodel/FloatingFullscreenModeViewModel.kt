@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.*
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.avatar.common.state.AvatarEmotion
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.data.model.ChatMessage
 import com.ai.assistance.operit.data.model.InputProcessingState
 import com.ai.assistance.operit.data.model.PromptFunctionType
@@ -12,6 +13,8 @@ import com.ai.assistance.operit.ui.floating.FloatContext
 import com.ai.assistance.operit.ui.floating.ui.fullscreen.XmlTextProcessor
 import com.ai.assistance.operit.ui.floating.ui.pet.AvatarEmotionManager
 import com.ai.assistance.operit.ui.floating.voice.SpeechInteractionManager
+import com.ai.assistance.operit.ui.floating.voice.VoiceBargeInPolicy
+import com.ai.assistance.operit.ui.floating.voice.VoiceWaveCapturePlanner
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.TtsSegmenter
 import com.ai.assistance.operit.util.stream.Stream
@@ -53,10 +56,33 @@ class FloatingFullscreenModeViewModel(
     var inputText by mutableStateOf("")
     var showDragHints by mutableStateOf(false)
 
-    var attachScreenContent by mutableStateOf(false)
-    var attachNotifications by mutableStateOf(false)
-    var attachLocation by mutableStateOf(false)
-    var hasOcrSelection by mutableStateOf(false)
+    private var attachScreenContentState by mutableStateOf(false)
+    private var attachNotificationsState by mutableStateOf(false)
+    private var attachLocationState by mutableStateOf(false)
+    private var hasOcrSelectionState by mutableStateOf(false)
+
+    var attachScreenContent: Boolean
+        get() = attachScreenContentState
+        set(value) {
+            attachScreenContentState =
+                value && CommonBaseUiResiduePolicy.allowsScreenContentAttach()
+        }
+    var attachNotifications: Boolean
+        get() = attachNotificationsState
+        set(value) {
+            attachNotificationsState =
+                value && CommonBaseUiResiduePolicy.allowsNotificationAttach()
+        }
+    var attachLocation: Boolean
+        get() = attachLocationState
+        set(value) {
+            attachLocationState = value && CommonBaseUiResiduePolicy.allowsLocationAttach()
+        }
+    var hasOcrSelection: Boolean
+        get() = hasOcrSelectionState
+        set(value) {
+            hasOcrSelectionState = value && CommonBaseUiResiduePolicy.allowsScreenOcr()
+        }
     var isStreamingTtsMuted by mutableStateOf(false)
     var voiceAvatarMotionRequest by mutableStateOf(VoiceAvatarMotionRequest())
         private set
@@ -106,7 +132,14 @@ class FloatingFullscreenModeViewModel(
             }
         },
         onStateChange = { msg -> aiMessage = msg }
-    )
+    ).also { manager ->
+        manager.onBargeInStopCommand = { dropCurrentUtterance ->
+            interruptAiTurnAndResumeCapture(
+                dropCurrentUtterance = dropCurrentUtterance,
+                suppressDuplicateStop = true,
+            )
+        }
+    }
     
     // 代理属性，方便 UI 访问
     val isRecording: Boolean get() = speechManager.isRecording
@@ -142,12 +175,82 @@ class FloatingFullscreenModeViewModel(
     }
 
     private fun prepareVoiceCaptureForAiTurn() {
-        if (!isWaveActive) return
-        shouldResumeVoiceCaptureAfterAiTurn = true
-        isVoiceCapturePausedForAi = true
-        resumeVoiceCaptureJob?.cancel()
-        if (speechManager.isRecording || speechManager.isProcessingSpeech) {
+        val plan =
+            VoiceWaveCapturePlanner.prepareForAiTurn(
+                waveActive = isWaveActive,
+                isRecording = speechManager.isRecording,
+                isProcessingSpeech = speechManager.isProcessingSpeech,
+            )
+        if (!plan.enterBargeIn && !plan.shouldResumeAfterAiTurn) {
+            return
+        }
+        shouldResumeVoiceCaptureAfterAiTurn = plan.shouldResumeAfterAiTurn
+        isVoiceCapturePausedForAi = plan.pausedForAi
+        if (plan.cancelResumeJob) {
+            resumeVoiceCaptureJob?.cancel()
+        }
+        if (plan.enterBargeIn) {
+            speechManager.enterBargeInStopListen()
+        }
+        // Keep the same AudioRecord for stop-command listen. Dual record would contend for the mic.
+        if (plan.stopCapture) {
             stopVoiceCapture(true)
+        }
+        if (plan.startCaptureWithoutCancelingAi) {
+            startVoiceCaptureKeepingAiTurn()
+        }
+    }
+
+    private fun startVoiceCaptureKeepingAiTurn() {
+        speechManager.startListening { errorMsg ->
+            aiMessage = errorMsg
+        }
+    }
+
+    private fun interruptAiTurnAndResumeCapture(
+        dropCurrentUtterance: Boolean = false,
+        suppressDuplicateStop: Boolean = false,
+    ) {
+        val plan =
+            VoiceWaveCapturePlanner.interrupt(
+                shouldResumeAfterAiTurn = shouldResumeVoiceCaptureAfterAiTurn,
+                isAiBusy = isAiBusy(),
+                isRecording = speechManager.isRecording,
+                isProcessingSpeech = speechManager.isProcessingSpeech,
+                dropCurrentUtterance = dropCurrentUtterance,
+            )
+        if (plan.cancelTtsJob) {
+            ttsSpeakJob?.cancel()
+            ttsSpeakJob = null
+        }
+        if (plan.cancelAiStreamJob) {
+            aiStreamJob?.cancel()
+            aiStreamJob = null
+            activeAiStreamIdentity = null
+        }
+        if (plan.cancelResumeJob) {
+            cancelPendingVoiceCaptureResume()
+        }
+        if (plan.resumeConversation) {
+            speechManager.resumeConversationListen(
+                dropCurrentUtterance = plan.dropCurrentUtterance,
+                suppressDuplicateStop = suppressDuplicateStop,
+            )
+        }
+        if (plan.cancelAiTurn) {
+            floatContext.onCancelMessage?.invoke()
+        }
+        coroutineScope.launch {
+            try {
+                speechManager.voiceService.stop()
+            } catch (_: Exception) {
+            }
+            if (plan.startCaptureIfIdle &&
+                !speechManager.isRecording &&
+                !speechManager.isProcessingSpeech
+            ) {
+                startVoiceCapture()
+            }
         }
     }
 
@@ -163,11 +266,31 @@ class FloatingFullscreenModeViewModel(
                     observedAiBusy = true
                 }
                 if (observedAiBusy && !busy) {
-                    shouldResumeVoiceCaptureAfterAiTurn = false
-                    isVoiceCapturePausedForAi = false
+                    val plan =
+                        VoiceWaveCapturePlanner.resumeAfterAiTurn(
+                            waveActive = isWaveActive,
+                            shouldResumeAfterAiTurn = shouldResumeVoiceCaptureAfterAiTurn,
+                            isRecording = speechManager.isRecording,
+                            isProcessingSpeech = speechManager.isProcessingSpeech,
+                        )
+                    if (plan.skipBecauseInterruptedOrInactive) {
+                        return@launch
+                    }
+                    if (plan.clearShouldResume) {
+                        shouldResumeVoiceCaptureAfterAiTurn = false
+                    }
+                    if (plan.clearPaused) {
+                        isVoiceCapturePausedForAi = false
+                    }
+                    if (plan.resumeConversation) {
+                        speechManager.resumeConversationListen(dropCurrentUtterance = false)
+                    }
                     // AI 这一轮结束后，总是从此刻重新开始计算空闲超时。
                     lastVoiceActivityAtMs = System.currentTimeMillis()
-                    if (!speechManager.isRecording && !speechManager.isProcessingSpeech) {
+                    if (plan.startCaptureIfIdle &&
+                        !speechManager.isRecording &&
+                        !speechManager.isProcessingSpeech
+                    ) {
                         startVoiceCapture()
                     }
                     return@launch
@@ -360,6 +483,7 @@ class FloatingFullscreenModeViewModel(
         cancelPendingVoiceCaptureResume()
         suppressRecognitionUntilMs = 0L
         waveModeAutoTimeoutEnabled = false
+        speechManager.resumeConversationListen(dropCurrentUtterance = false)
         stopVoiceCapture(true)
         coroutineScope.launch { speechManager.voiceService.stop() }
         isWaveActive = false
@@ -390,17 +514,11 @@ class FloatingFullscreenModeViewModel(
 
     fun onCenterAvatarClick() {
         if (isWaveActive && shouldInterceptCenterAvatarClick()) {
-            val shouldCancelAiTurn = shouldResumeVoiceCaptureAfterAiTurn || isAiBusy()
-            cancelPendingVoiceCaptureResume()
-            if (shouldCancelAiTurn) {
-                floatContext.onCancelMessage?.invoke()
-            }
-            coroutineScope.launch {
-                speechManager.voiceService.stop()
-                if (!speechManager.isRecording && !speechManager.isProcessingSpeech) {
-                    startVoiceCapture()
-                }
-            }
+            val dropCurrent = speechManager.userMessage.isNotBlank()
+            interruptAiTurnAndResumeCapture(
+                dropCurrentUtterance = dropCurrent,
+                suppressDuplicateStop = dropCurrent,
+            )
             return
         }
 
@@ -412,14 +530,26 @@ class FloatingFullscreenModeViewModel(
     }
 
     fun handleRecognitionResult(resultText: String, isFinal: Boolean) {
-        if (isWaveActive && System.currentTimeMillis() < suppressRecognitionUntilMs) {
+        val bargeInStopListen =
+            isWaveActive && (speechManager.isBargeInStopListen || isVoiceCapturePausedForAi)
+        if (
+            VoiceBargeInPolicy.shouldDropByCaptureSuppress(
+                nowMs = System.currentTimeMillis(),
+                suppressUntilMs = suppressRecognitionUntilMs,
+                bargeInStopListen = bargeInStopListen,
+            )
+        ) {
             return
         }
-        if (isWaveActive && resultText.isNotBlank()) {
+        if (isWaveActive && resultText.isNotBlank() && !bargeInStopListen) {
             lastVoiceActivityAtMs = System.currentTimeMillis()
         }
-        // 委托给 Manager 处理，波浪模式下启用自动静默发送
-        speechManager.handleRecognitionResult(resultText, isFinal, autoSendSilence = isWaveActive)
+        // 波浪连续听写才启用 2s 静默发送；AI/TTS 插话监听必须关闭，否则回声会变成新一轮 onSendMessage
+        speechManager.handleRecognitionResult(
+            resultText,
+            isFinal,
+            autoSendSilence = isWaveActive && !bargeInStopListen,
+        )
     }
 
     // ===== 初始化与清理 =====
@@ -564,12 +694,17 @@ class FloatingFullscreenModeViewModel(
     
     fun sendInputMessage() {
         val text = inputText.trim()
-        if (text.isEmpty() && !attachScreenContent && !attachNotifications && !attachLocation && !hasOcrSelection) return
+        val captureScreen = attachScreenContent && CommonBaseUiResiduePolicy.allowsScreenContentAttach()
+        val captureNotifications =
+            attachNotifications && CommonBaseUiResiduePolicy.allowsNotificationAttach()
+        val captureLocation = attachLocation && CommonBaseUiResiduePolicy.allowsLocationAttach()
+        val captureOcr = hasOcrSelection && CommonBaseUiResiduePolicy.allowsScreenOcr()
+        if (text.isEmpty() && !captureScreen && !captureNotifications && !captureLocation && !captureOcr) return
 
         // 立即清理UI状态，不等待协程
-        val shouldCaptureScreen = attachScreenContent
-        val shouldCaptureNotifications = attachNotifications
-        val shouldCaptureLocation = attachLocation
+        val shouldCaptureScreen = captureScreen
+        val shouldCaptureNotifications = captureNotifications
+        val shouldCaptureLocation = captureLocation
         
         inputText = ""
         attachScreenContent = false
@@ -627,13 +762,19 @@ class FloatingFullscreenModeViewModel(
 
                 when (item.type) {
                     WakeWordPreferences.VoiceAutoAttachType.SCREEN_OCR -> {
-                        attachmentDelegate.captureScreenContent()
+                        if (CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+                            attachmentDelegate.captureScreenContent()
+                        }
                     }
                     WakeWordPreferences.VoiceAutoAttachType.NOTIFICATIONS -> {
-                        attachmentDelegate.captureNotifications()
+                        if (CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+                            attachmentDelegate.captureNotifications()
+                        }
                     }
                     WakeWordPreferences.VoiceAutoAttachType.LOCATION -> {
-                        attachmentDelegate.captureLocation()
+                        if (CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+                            attachmentDelegate.captureLocation()
+                        }
                     }
                     WakeWordPreferences.VoiceAutoAttachType.TIME -> {
                         attachmentDelegate.captureCurrentTime()

@@ -1,8 +1,7 @@
 package com.ai.assistance.operit.services.assistant
 
-import android.content.Intent
-import android.os.Bundle
 import android.service.voice.VoiceInteractionService
+import com.ai.assistance.operit.core.devicebridge.DspAndroidBridge
 import com.ai.assistance.operit.util.AppLogger
 
 /**
@@ -29,6 +28,7 @@ class OperitVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
         AppLogger.d(TAG, "VoiceInteractionService ready")
+        DspAndroidBridge.attachVoiceInteraction(this)
     }
     
     /**
@@ -42,11 +42,13 @@ class OperitVoiceInteractionService : VoiceInteractionService() {
     
     override fun onShutdown() {
         AppLogger.d(TAG, "VoiceInteractionService shutting down")
+        DspAndroidBridge.detachVoiceInteraction(this)
         super.onShutdown()
     }
     
     override fun onDestroy() {
         AppLogger.d(TAG, "VoiceInteractionService destroyed")
+        DspAndroidBridge.detachVoiceInteraction(this)
         super.onDestroy()
     }
 }

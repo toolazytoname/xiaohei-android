@@ -3,6 +3,8 @@ package com.ai.assistance.operit.ui.main.navigation
 import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Extension
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
+import com.ai.assistance.operit.core.commonbase.CommonBaseStartupPolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.core.tools.packTool.TOOLPKG_NAV_SURFACE_MAIN_SIDEBAR_PLUGINS
@@ -14,6 +16,10 @@ import com.ai.assistance.operit.ui.common.NavItem
 
 object AppRouteCatalog {
     fun build(context: Context): AppNavigationModel {
+        if (CommonBaseStartupPolicy.skipToolPkgNavigationRuntime()) {
+            return hostOnlyNavigationModel(context)
+        }
+
         val packageManager =
             PackageManager.getInstance(context, AIToolHandler.getInstance(context))
         val toolPkgRoutes =
@@ -71,8 +77,34 @@ object AppRouteCatalog {
         )
     }
 
+    private fun hostOnlyNavigationModel(context: Context): AppNavigationModel {
+        return AppNavigationModel(
+            routes =
+                ScreenRouteRegistry.hostRouteSpecs(context).filter { spec ->
+                    CommonBaseNavigationPolicy.allowsRoute(routeId = spec.routeId)
+                },
+            navigationEntries =
+                (
+                    ScreenRouteRegistry.mainSidebarEntries(context) +
+                        ScreenRouteRegistry.toolboxEntries(context)
+                    )
+                    .filter { entry -> CommonBaseNavigationPolicy.allowsRoute(routeId = entry.routeId) }
+                    .sortedWith(
+                        compareBy<NavigationEntrySpec>({ it.surface.ordinal }, { it.order }, { it.title })
+                    )
+        )
+    }
+
     fun resolveScreen(model: AppNavigationModel, entry: RouteEntry): Screen? {
-        ScreenRouteRegistry.screenFromEntry(entry)?.let { return it }
+        if (!CommonBaseNavigationPolicy.allowsRoute(routeId = entry.routeId)) {
+            return null
+        }
+        ScreenRouteRegistry.screenFromEntry(entry)?.let { screen ->
+            if (!CommonBaseNavigationPolicy.allowsScreenType(typeName = screen.javaClass.simpleName)) {
+                return null
+            }
+            return screen
+        }
 
         val spec = model.routesById[entry.routeId] ?: return null
         if (spec.runtime != RouteRuntime.TOOLPKG_COMPOSE_DSL) {
@@ -89,6 +121,9 @@ object AppRouteCatalog {
     }
 
     fun initialEntry(navItem: NavItem): RouteEntry {
+        if (!CommonBaseNavigationPolicy.allowsNavItemRoute(navItemRoute = navItem.route)) {
+            return ScreenRouteRegistry.toEntry(Screen.AiChat)
+        }
         return ScreenRouteRegistry.initialEntry(navItem)
     }
 

@@ -38,7 +38,6 @@ pdfbox = "2.0.27.0"
 zip4j = "2.11.5"
 coil = "2.5.0"
 jlatexmath = "0.2.0"
-renderx = "1.0.0"
 kotlinx-serialization = "1.9.0"
 uuid = "0.8.2"
 gson = "2.10.1"
@@ -69,7 +68,7 @@ mockito = "5.2.0"
 mockito-kotlin = "5.1.0"
 reorderable = "2.5.1"
 swipe = "1.2.0"
-objectbox = "5.3.0"
+objectbox = "6.0.0-beta"
 mediapipe = "0.10.11"
 work = "2.9.0"
 uiTextAndroid = "1.10.4"
@@ -163,7 +162,6 @@ coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 
 # LaTeX rendering
 jlatexmath = { group = "ru.noties", name = "jlatexmath-android", version.ref = "jlatexmath" }
-renderx = { group = "com.github.tech-pw", name = "RenderX", version.ref = "renderx" }
 
 # Serialization
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

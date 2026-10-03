@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project("mmd_jni")
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/operit_git_source.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/xiaohei_page_size.cmake")
 
 operit_prepare_git_source(
     OPERIT_SABA_SOURCE_DIR
@@ -100,5 +101,4 @@ target_link_libraries(
     LinearMath
 )
 
-# 16KB page size support (Android 15+ requirement)
-target_link_options(MmdWrapper PRIVATE "-Wl,-z,max-page-size=16384")
+xiaohei_apply_16kb_page_size_graph(MmdWrapper)

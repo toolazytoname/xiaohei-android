@@ -466,7 +466,7 @@ class ConversationService(
             chatId: String?,
             workspacePath: String?,
             workspaceEnv: String? = null,
-            packageManager: PackageManager,
+            packageManager: PackageManager?,
             promptFunctionType: PromptFunctionType,
             customSystemPromptTemplate: String? = null,
             roleCardId: String? = null,

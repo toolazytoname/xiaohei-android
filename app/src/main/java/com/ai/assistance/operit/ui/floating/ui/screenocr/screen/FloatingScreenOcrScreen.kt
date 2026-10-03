@@ -1,5 +1,7 @@
 package com.ai.assistance.operit.ui.floating.ui.screenocr.screen
 
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
+
 import com.ai.assistance.operit.R
 import android.widget.Toast
 import android.graphics.Bitmap
@@ -276,6 +278,12 @@ private enum class SelectionDragHandle {
 
 @Composable
 fun FloatingScreenOcrScreen(floatContext: FloatContext) {
+    if (!CommonBaseUiResiduePolicy.allowsScreenOcr()) {
+        LaunchedEffect(Unit) {
+            floatContext.onModeChange(com.ai.assistance.operit.ui.floating.FloatingMode.WINDOW)
+        }
+        return
+    }
     val context = androidx.compose.ui.platform.LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     val handleRadiusPx = with(density) { 18.dp.toPx() }

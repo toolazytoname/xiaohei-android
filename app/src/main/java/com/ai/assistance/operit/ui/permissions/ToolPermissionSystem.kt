@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.ai.assistance.operit.data.model.AITool
+import com.ai.assistance.operit.core.commonbase.CommonBaseToolCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -189,19 +190,41 @@ class ToolPermissionSystem private constructor(private val context: Context) {
      * Check if a tool is allowed to execute
      */
     suspend fun checkToolPermission(tool: AITool): Boolean {
+        return checkToolPermissionDecision(tool).granted
+    }
+
+    data class ToolPermissionDecision(
+        val granted: Boolean,
+        val viaExplicitPrompt: Boolean
+    )
+
+    suspend fun checkToolPermissionDecision(tool: AITool): ToolPermissionDecision {
         AppLogger.d(TAG, "Starting permission check: ${tool.name}")
-        
+
         val preferences = context.toolPermissionsDataStore.data.first()
         val masterSwitch = PermissionLevel.fromString(preferences[MASTER_SWITCH] ?: DEFAULT_MASTER_SWITCH)
         val key = toolPermissionKey(tool.name)
         val overrideLevel = preferences[key]?.let { PermissionLevel.fromString(it) }
-        
+
         val permissionLevel = overrideLevel ?: masterSwitch
-        
-        return when (permissionLevel) {
-            PermissionLevel.ALLOW -> true
-            PermissionLevel.ASK -> requestPermission(tool)
-            PermissionLevel.FORBID -> false
+        val forceExplicitAsk = CommonBaseToolCatalog.forceExplicitConfirmation(tool.name)
+
+        return when {
+            forceExplicitAsk && permissionLevel == PermissionLevel.FORBID ->
+                ToolPermissionDecision(granted = false, viaExplicitPrompt = false)
+            forceExplicitAsk ->
+                ToolPermissionDecision(
+                    granted = requestPermission(tool),
+                    viaExplicitPrompt = true
+                )
+            permissionLevel == PermissionLevel.ALLOW ->
+                ToolPermissionDecision(granted = true, viaExplicitPrompt = false)
+            permissionLevel == PermissionLevel.ASK ->
+                ToolPermissionDecision(
+                    granted = requestPermission(tool),
+                    viaExplicitPrompt = true
+                )
+            else -> ToolPermissionDecision(granted = false, viaExplicitPrompt = false)
         }
     }
     

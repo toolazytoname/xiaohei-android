@@ -7,6 +7,8 @@ import com.ai.assistance.operit.core.chat.messageTimingNow
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.StringResultData
+import com.ai.assistance.operit.core.commonbase.CommonBaseCapabilityPolicy
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.tools.PackageToolExecutor
 import com.ai.assistance.operit.core.tools.PackageTool
 import com.ai.assistance.operit.core.tools.ToolPackage
@@ -2915,6 +2917,9 @@ private constructor(private val context: Context, private val aiToolHandler: AIT
      * @return Package description and tools for AI prompt enhancement, or error message
      */
     fun usePackage(packageName: String): String {
+        if (CommonBaseProfile.isEnabled) {
+            return CommonBaseCapabilityPolicy.packageActivationDeniedMessage(packageName)
+        }
         ensureInitialized()
         val normalizedPackageName = normalizePackageName(packageName)
 
@@ -3049,6 +3054,14 @@ private constructor(private val context: Context, private val aiToolHandler: AIT
      * Keeps registration site minimal by centralizing result construction here.
      */
     fun executeUsePackageTool(toolName: String, packageName: String): ToolResult {
+        if (CommonBaseProfile.isEnabled) {
+            return ToolResult(
+                toolName = toolName,
+                success = false,
+                result = StringResultData(""),
+                error = CommonBaseCapabilityPolicy.packageActivationDeniedMessage(packageName)
+            )
+        }
         if (packageName.isBlank()) {
             return ToolResult(
                 toolName = toolName,

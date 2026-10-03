@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -66,38 +67,60 @@ fun FloatingAttachmentPanel(
     var showPackageDialog by remember { mutableStateOf(false) }
 
     // 定义附件选项列表，便于使用LazyRow
-    val attachmentOptions = listOf(
-        AttachmentOptionData(
-            icon = Icons.Default.ScreenshotMonitor,
-            label = stringResource(R.string.screen_content),
-            onClick = onAttachScreenContent
-        ),
-        AttachmentOptionData(
-            icon = Icons.Default.Notifications,
-            label = stringResource(R.string.current_notifications),
-            onClick = onAttachNotifications
-        ),
-        AttachmentOptionData(
-            icon = Icons.Default.LocationOn,
-            label = stringResource(R.string.current_location),
-            onClick = onAttachLocation
-        ),
-        AttachmentOptionData(
-            icon = Icons.Default.Crop,
-            label = stringResource(R.string.screen_ocr_select),
-            onClick = onAttachScreenOcr
-        ),
-        AttachmentOptionData(
-            icon = Icons.Default.AutoAwesome,
-            label = stringResource(R.string.attachment_package),
-            onClick = { showPackageDialog = true },
-            dismissPanelOnClick = false
-        )
-    )
+    val attachmentOptions = buildList {
+        if (CommonBaseUiResiduePolicy.allowsScreenContentAttach()) {
+            add(
+                AttachmentOptionData(
+                    icon = Icons.Default.ScreenshotMonitor,
+                    label = stringResource(R.string.screen_content),
+                    onClick = onAttachScreenContent
+                )
+            )
+        }
+        if (CommonBaseUiResiduePolicy.allowsNotificationAttach()) {
+            add(
+                AttachmentOptionData(
+                    icon = Icons.Default.Notifications,
+                    label = stringResource(R.string.current_notifications),
+                    onClick = onAttachNotifications
+                )
+            )
+        }
+        if (CommonBaseUiResiduePolicy.allowsLocationAttach()) {
+            add(
+                AttachmentOptionData(
+                    icon = Icons.Default.LocationOn,
+                    label = stringResource(R.string.current_location),
+                    onClick = onAttachLocation
+                )
+            )
+        }
+        if (CommonBaseUiResiduePolicy.allowsScreenOcr()) {
+            add(
+                AttachmentOptionData(
+                    icon = Icons.Default.Crop,
+                    label = stringResource(R.string.screen_ocr_select),
+                    onClick = onAttachScreenOcr
+                )
+            )
+        }
+        if (CommonBaseUiResiduePolicy.allowsPackageAttach()) {
+            add(
+                AttachmentOptionData(
+                    icon = Icons.Default.AutoAwesome,
+                    label = stringResource(R.string.attachment_package),
+                    onClick = { showPackageDialog = true },
+                    dismissPanelOnClick = false
+                )
+            )
+        }
+    }
+
+    val showPanel = visible && attachmentOptions.isNotEmpty()
 
     // 附件选择面板 - 使用展开动画，从下方向上展开
     AnimatedVisibility(
-        visible = visible,
+        visible = showPanel,
         enter = expandVertically(animationSpec = tween(200), expandFrom = Alignment.Bottom) + fadeIn(),
         exit = shrinkVertically(animationSpec = tween(200), shrinkTowards = Alignment.Bottom) + fadeOut()
     ) {

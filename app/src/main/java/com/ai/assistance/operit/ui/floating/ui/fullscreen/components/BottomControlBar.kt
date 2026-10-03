@@ -91,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.ExperimentalComposeUiApi
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.ui.floating.FloatContext
 import com.ai.assistance.operit.ui.floating.FloatingMode
 import kotlin.math.abs
@@ -197,7 +198,15 @@ fun BottomControlBar(
                 else -> Color.White
             }
 
-            val canSend = userMessage.isNotBlank() || attachScreenContent || attachNotifications || attachLocation || hasOcrSelection
+            val allowScreenContentAttach = CommonBaseUiResiduePolicy.allowsScreenContentAttach()
+            val allowNotificationAttach = CommonBaseUiResiduePolicy.allowsNotificationAttach()
+            val allowLocationAttach = CommonBaseUiResiduePolicy.allowsLocationAttach()
+            val allowScreenOcr = CommonBaseUiResiduePolicy.allowsScreenOcr()
+            val canSend = userMessage.isNotBlank() ||
+                (allowScreenContentAttach && attachScreenContent) ||
+                (allowNotificationAttach && attachNotifications) ||
+                (allowLocationAttach && attachLocation) ||
+                (allowScreenOcr && hasOcrSelection)
             val glowPadding = 10.dp
             val glowBaseColors = listOf(
                 Color(0xFF42A5F5),
@@ -238,56 +247,64 @@ fun BottomControlBar(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // 屏幕内容
-                    GlassyChip(
-                        selected = attachScreenContent,
-                        text = stringResource(R.string.floating_screen_content),
-                        icon = Icons.Default.Check,
-                        showIcon = attachScreenContent,
-                        onClick = { onAttachScreenContentChange(!attachScreenContent) }
-                    )
+                    if (allowScreenContentAttach) {
+                        // 屏幕内容
+                        GlassyChip(
+                            selected = attachScreenContent,
+                            text = stringResource(R.string.floating_screen_content),
+                            icon = Icons.Default.Check,
+                            showIcon = attachScreenContent,
+                            onClick = { onAttachScreenContentChange(!attachScreenContent) }
+                        )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
 
-                    // 通知
-                    GlassyChip(
-                        selected = attachNotifications,
-                        text = stringResource(R.string.floating_notification),
-                        icon = Icons.Default.Check,
-                        showIcon = attachNotifications,
-                        onClick = { onAttachNotificationsChange(!attachNotifications) }
-                    )
+                    if (allowNotificationAttach) {
+                        // 通知
+                        GlassyChip(
+                            selected = attachNotifications,
+                            text = stringResource(R.string.floating_notification),
+                            icon = Icons.Default.Check,
+                            showIcon = attachNotifications,
+                            onClick = { onAttachNotificationsChange(!attachNotifications) }
+                        )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
 
-                    // 位置
-                    GlassyChip(
-                        selected = attachLocation,
-                        text = stringResource(R.string.floating_position),
-                        icon = Icons.Default.Check,
-                        showIcon = attachLocation,
-                        onClick = { onAttachLocationChange(!attachLocation) }
-                    )
+                    if (allowLocationAttach) {
+                        // 位置
+                        GlassyChip(
+                            selected = attachLocation,
+                            text = stringResource(R.string.floating_position),
+                            icon = Icons.Default.Check,
+                            showIcon = attachLocation,
+                            onClick = { onAttachLocationChange(!attachLocation) }
+                        )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
 
-                    // 圈选识别
-                    GlassyChip(
-                        selected = isScreenOcrSelected,
-                        text = if (hasOcrSelection) stringResource(R.string.floating_ocr_selected) else stringResource(R.string.floating_ocr_select),
-                        icon = if (isScreenOcrSelected) Icons.Default.Check else Icons.Default.Crop,
-                        showIcon = true,
-                        onClick = {
-                            if (hasOcrSelection) {
-                                // 已有圈选内容，点击清除
-                                onHasOcrSelectionChange(false)
-                            } else if (isScreenOcrMode) {
-                                floatContext.onModeChange(floatContext.previousMode)
-                            } else {
-                                floatContext.onModeChange(FloatingMode.SCREEN_OCR)
+                    if (allowScreenOcr) {
+                        // 圈选识别
+                        GlassyChip(
+                            selected = isScreenOcrSelected,
+                            text = if (hasOcrSelection) stringResource(R.string.floating_ocr_selected) else stringResource(R.string.floating_ocr_select),
+                            icon = if (isScreenOcrSelected) Icons.Default.Check else Icons.Default.Crop,
+                            showIcon = true,
+                            onClick = {
+                                if (hasOcrSelection) {
+                                    // 已有圈选内容，点击清除
+                                    onHasOcrSelectionChange(false)
+                                } else if (isScreenOcrMode) {
+                                    floatContext.onModeChange(floatContext.previousMode)
+                                } else {
+                                    floatContext.onModeChange(FloatingMode.SCREEN_OCR)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
 
                 Box(modifier = Modifier.fillMaxWidth()) {

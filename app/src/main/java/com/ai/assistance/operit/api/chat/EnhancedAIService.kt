@@ -85,6 +85,8 @@ import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.data.preferences.preferencesManager
 import com.ai.assistance.operit.data.repository.MemoryAutoSaveCandidateRepository
 import com.ai.assistance.operit.core.config.SystemToolPrompts
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
+import com.ai.assistance.operit.core.commonbase.CommonBaseToolCatalog
 import com.ai.assistance.operit.data.model.ToolPrompt
 import com.ai.assistance.operit.data.model.ToolParameterSchema
 import com.ai.assistance.operit.util.ChatUtils
@@ -512,8 +514,15 @@ class EnhancedAIService private constructor(private val context: Context) {
     private var currentResponseCallback: ((content: String, thinking: String?) -> Unit)? = null
     private var currentCompleteCallback: (() -> Unit)? = null
 
-    // Package manager for handling tool packages
-    private val packageManager = PackageManager.getInstance(context, toolHandler)
+    // Original profile still uses tool packages. Common-base must not construct PackageManager
+    // during EnhancedAIService init or the first chat turn.
+    private val packageManager: PackageManager?
+        get() {
+            if (CommonBaseProfile.isEnabled) {
+                return null
+            }
+            return PackageManager.getInstance(context, toolHandler)
+        }
 
     // 存储最后的回复内容，用于通知
     private var lastReplyContent: String? = null
@@ -2905,7 +2914,33 @@ class EnhancedAIService private constructor(private val context: Context) {
             val chatModelHasDirectAudio = config.enableDirectAudioProcessing
             val chatModelHasDirectVideo = config.enableDirectVideoProcessing
 
-            val selectedTools = if (toolExposureMode == ToolExposureMode.CLI) {
+            val selectedTools = if (CommonBaseProfile.isEnabled) {
+                val categories = if (isEnglish) {
+                    SystemToolPrompts.getAIAllCategoriesEn(
+                        hasBackendImageRecognition = hasBackendImageRecognition,
+                        chatModelHasDirectImage = chatModelHasDirectImage,
+                        hasBackendAudioRecognition = hasBackendAudioRecognition,
+                        hasBackendVideoRecognition = hasBackendVideoRecognition,
+                        chatModelHasDirectAudio = chatModelHasDirectAudio,
+                        chatModelHasDirectVideo = chatModelHasDirectVideo,
+                        safBookmarkNames = safBookmarkNames
+                    )
+                } else {
+                    SystemToolPrompts.getAIAllCategoriesCn(
+                        hasBackendImageRecognition = hasBackendImageRecognition,
+                        chatModelHasDirectImage = chatModelHasDirectImage,
+                        hasBackendAudioRecognition = hasBackendAudioRecognition,
+                        hasBackendVideoRecognition = hasBackendVideoRecognition,
+                        chatModelHasDirectAudio = chatModelHasDirectAudio,
+                        chatModelHasDirectVideo = chatModelHasDirectVideo,
+                        safBookmarkNames = safBookmarkNames
+                    )
+                }
+                categories.flatMap { it.tools }.filter { tool ->
+                    CommonBaseToolCatalog.isPromisedTool(tool.name) &&
+                        roleCardToolAccess.isBuiltinToolAllowed(tool.name)
+                }.toMutableList()
+            } else if (toolExposureMode == ToolExposureMode.CLI) {
                 CliToolModeSupport.buildCliPublicToolPrompts(isEnglish).toMutableList()
             } else {
                 val categories = if (isEnglish) {
@@ -2937,12 +2972,12 @@ class EnhancedAIService private constructor(private val context: Context) {
                 }
             }
 
-            if (toolExposureMode == ToolExposureMode.CLI) {
+            if (!CommonBaseProfile.isEnabled && toolExposureMode == ToolExposureMode.CLI) {
                 AppLogger.d(
                     TAG,
                     "CLI Tool Mode已启用，提供 ${selectedTools.size} 个工具 (provider=${config.apiProviderType})"
                 )
-            } else if (config.enableToolCall) {
+            } else if (!CommonBaseProfile.isEnabled && config.enableToolCall) {
                 selectedTools.add(
                     ToolPrompt(
                         name = "package_proxy",
@@ -2971,7 +3006,16 @@ class EnhancedAIService private constructor(private val context: Context) {
                 functionType = functionType,
                 promptFunctionType = promptFunctionType,
                 useEnglish = isEnglish
-            )
+            ).let { tools ->
+                if (CommonBaseProfile.isEnabled) {
+                    tools.filter { tool ->
+                        CommonBaseToolCatalog.isPromisedTool(tool.name) &&
+                            roleCardToolAccess.isBuiltinToolAllowed(tool.name)
+                    }
+                } else {
+                    tools
+                }
+            }
 
             if (hookedTools.isEmpty()) {
                 AppLogger.d(TAG, "根据当前工具开关，未选择任何Tool Call工具")

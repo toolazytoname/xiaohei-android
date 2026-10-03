@@ -4,6 +4,9 @@ import android.content.Context
 import android.os.Environment
 import com.ai.assistance.operit.core.chat.hooks.PromptHookContext
 import com.ai.assistance.operit.core.chat.hooks.PromptHookRegistry
+import com.ai.assistance.operit.core.commonbase.CommonBasePackageLookup
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
+import com.ai.assistance.operit.core.commonbase.CommonBaseToolCatalog
 import com.ai.assistance.operit.core.tools.climode.CliToolModeSupport
 import com.ai.assistance.operit.core.tools.climode.ToolExposureMode
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
@@ -258,7 +261,7 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
    */
   suspend fun getSystemPrompt(
           context: Context,
-          packageManager: PackageManager,
+          packageManager: PackageManager?,
           chatId: String? = null,
           workspacePath: String? = null,
           workspaceEnv: String? = null,
@@ -281,29 +284,47 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
           hookMetadata: Map<String, Any?> = emptyMap(),
           dispatchToolPromptComposeHooks: (PromptHookContext) -> PromptHookContext = PromptHookRegistry::dispatchToolPromptComposeHooks
   ): String {
-    val enabledPackages = packageManager.getEnabledPackageNames()
-    val packageSystemVisible =
-        toolExposureMode == ToolExposureMode.FULL && enableTools && (toolVisibility["use_package"] ?: true)
-    val mcpServers = packageManager.getAvailableServerPackages().filterKeys { serverName ->
-        allowedMcpServerNames?.contains(serverName) ?: true
-    }
-    val skillPackages = try {
-        SkillRepository.getInstance(
-            com.ai.assistance.operit.core.application.OperitApplication.instance.applicationContext
-        ).getAiVisibleSkillPackages().filterKeys { skillName ->
-            allowedSkillNames?.contains(skillName) ?: true
+    val enabledPackages =
+        CommonBasePackageLookup.skipWhenCommon(commonValue = emptyList()) {
+            requireNotNull(packageManager) {
+                "PackageManager is required to compose the system prompt outside the common-base profile"
+            }.getEnabledPackageNames()
         }
-    } catch (_: Exception) {
-        emptyMap()
-    }
+    val packageSystemVisible =
+        !CommonBaseProfile.isEnabled &&
+            toolExposureMode == ToolExposureMode.FULL &&
+            enableTools &&
+            (toolVisibility["use_package"] ?: true)
+    val mcpServers =
+        CommonBasePackageLookup.skipWhenCommon(commonValue = emptyMap()) {
+            requireNotNull(packageManager) {
+                "PackageManager is required to compose the system prompt outside the common-base profile"
+            }.getAvailableServerPackages().filterKeys { serverName ->
+                allowedMcpServerNames?.contains(serverName) ?: true
+            }
+        }
+    val skillPackages =
+        CommonBasePackageLookup.skipWhenCommon(commonValue = emptyMap()) {
+            try {
+                SkillRepository.getInstance(
+                    com.ai.assistance.operit.core.application.OperitApplication.instance.applicationContext
+                ).getAiVisibleSkillPackages().filterKeys { skillName ->
+                    allowedSkillNames?.contains(skillName) ?: true
+                }
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
 
     // Build the available packages section
     val packagesSection = StringBuilder()
 
     // Filter out imported packages that no longer exist in availablePackages
     val validEnabledPackages = enabledPackages.filter { packageName ->
-        packageManager.getPackageTools(packageName) != null &&
-            !packageManager.isToolPkgContainer(packageName) &&
+        val resolvedPackageManager = packageManager
+        resolvedPackageManager != null &&
+            resolvedPackageManager.getPackageTools(packageName) != null &&
+            !resolvedPackageManager.isToolPkgContainer(packageName) &&
             (allowedPackageNames?.contains(packageName) ?: true)
     }
 
@@ -316,7 +337,9 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
 
       // List imported JS packages (only those that still exist)
       for (packageName in validEnabledPackages) {
-        val packageTools = packageManager.getPackageTools(packageName)
+        val packageTools = requireNotNull(packageManager) {
+            "PackageManager is required to list enabled packages outside the common-base profile"
+        }.getPackageTools(packageName)
         if (packageTools != null) {
           val preferredLanguage = if (useEnglish) "en" else "zh"
           val resolvedDescription = try {
@@ -384,8 +407,8 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
 
     // Determine the available tools string based on tool visibility and recognition capabilities.
     // 当使用Tool Call API时，不在系统提示词中包含工具描述（工具已通过API的tools字段发送）
-    val availableToolsEn = if (useToolCallApi || toolExposureMode == ToolExposureMode.CLI) "" else (
-        getMemoryToolsEn(toolVisibility) +
+    val availableToolsEn = if (useToolCallApi || (!CommonBaseProfile.isEnabled && toolExposureMode == ToolExposureMode.CLI)) "" else (
+        (if (CommonBaseProfile.isEnabled) "" else getMemoryToolsEn(toolVisibility)) +
             getAvailableToolsEn(
                 chatId = chatId,
                 hasImageRecognition = hasImageRecognition,
@@ -401,8 +424,8 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
                 context = context
             )
     )
-    val availableToolsCn = if (useToolCallApi || toolExposureMode == ToolExposureMode.CLI) "" else (
-        getMemoryToolsCn(toolVisibility) +
+    val availableToolsCn = if (useToolCallApi || (!CommonBaseProfile.isEnabled && toolExposureMode == ToolExposureMode.CLI)) "" else (
+        (if (CommonBaseProfile.isEnabled) "" else getMemoryToolsCn(toolVisibility)) +
             getAvailableToolsCn(
                 chatId = chatId,
                 hasImageRecognition = hasImageRecognition,
@@ -421,7 +444,13 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
 
     // Handle tools disable/enable
     if (enableTools) {
-        if (toolExposureMode == ToolExposureMode.CLI) {
+        if (CommonBaseProfile.isEnabled) {
+            prompt = prompt
+                .replace("TOOL_USAGE_GUIDELINES_SECTION", if (useEnglish) CommonBaseToolCatalog.usageGuidelinesEn else CommonBaseToolCatalog.usageGuidelinesCn)
+                .replace("PACKAGE_SYSTEM_GUIDELINES_SECTION", "")
+                .replace("ACTIVE_PACKAGES_SECTION", "")
+                .replace("AVAILABLE_TOOLS_SECTION", if (useEnglish) availableToolsEn else availableToolsCn)
+        } else if (toolExposureMode == ToolExposureMode.CLI) {
             prompt = prompt
                 .replace("TOOL_USAGE_GUIDELINES_SECTION", CliToolModeSupport.buildCliModePrompt(useEnglish))
                 .replace("PACKAGE_SYSTEM_GUIDELINES_SECTION", "")
@@ -572,7 +601,7 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
    */
   suspend fun getSystemPromptWithCustomPrompts(
           context: Context,
-          packageManager: PackageManager,
+          packageManager: PackageManager?,
           chatId: String?,
           workspacePath: String?,
           workspaceEnv: String? = null,

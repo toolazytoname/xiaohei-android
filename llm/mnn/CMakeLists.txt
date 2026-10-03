@@ -3,13 +3,27 @@ cmake_minimum_required(VERSION 3.22.1)
 project("mnn_jni")
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/operit_git_source.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/xiaohei_page_size.cmake")
+
+# Pin MNN to the kFdChunk ODR-verified commit. If an explicit cache/command-line
+# OPERIT_MNN_GIT_REF already names a different ref, refuse rather than silently
+# changing versions. Default is this SHA, not master.
+set(_OPERIT_MNN_REQUIRED_GIT_REF "451006a22d059db759eb036585f2ad6b711feaeb")
+if(DEFINED OPERIT_MNN_GIT_REF AND NOT OPERIT_MNN_GIT_REF STREQUAL "")
+    string(TOLOWER "${OPERIT_MNN_GIT_REF}" _operit_mnn_git_ref_lc)
+    if(NOT _operit_mnn_git_ref_lc STREQUAL _OPERIT_MNN_REQUIRED_GIT_REF)
+        message(FATAL_ERROR
+            "mnn-kfdchunk: refuse: OPERIT_MNN_GIT_REF=${OPERIT_MNN_GIT_REF} "
+            "required=${_OPERIT_MNN_REQUIRED_GIT_REF}; will not silently change MNN version")
+    endif()
+endif()
 
 operit_prepare_git_source(
     MNN_SOURCE_DIR
     OPERIT_MNN_BINARY_DIR
     mnn
     "https://github.com/alibaba/MNN.git"
-    "master"
+    "${_OPERIT_MNN_REQUIRED_GIT_REF}"
 )
 
 operit_prepare_git_source(
@@ -51,6 +65,14 @@ set(MNN_BUILD_QUANTOOLS OFF CACHE BOOL "Build quantools" FORCE)
 set(MNN_EVALUATION OFF CACHE BOOL "Build evaluation" FORCE)
 set(MNN_BUILD_CONVERTER OFF CACHE BOOL "Build converter" FORCE)
 set(MNN_BUILD_TRAIN OFF CACHE BOOL "Build train" FORCE)
+
+# Apply kFdChunk C++11 ODR out-of-class definition after populate, before add.
+# include is fatal on missing file or apply refuse. Does not change backends.
+set(_mnn_kfdchunk_apply "${CMAKE_CURRENT_LIST_DIR}/../../cmake/patches/mnn-kfdchunk/apply_kFdChunk_odr.cmake")
+if(NOT EXISTS "${_mnn_kfdchunk_apply}")
+    message(FATAL_ERROR "mnn-kfdchunk: refuse: missing ${_mnn_kfdchunk_apply}")
+endif()
+include("${_mnn_kfdchunk_apply}")
 
 # 添加 MNN 主项目
 add_subdirectory(${MNN_SOURCE_DIR} ${OPERIT_MNN_BINARY_DIR})
@@ -102,11 +124,7 @@ if(TARGET llm)
     target_link_libraries(MNNWrapper llm)
 endif()
 
-# 添加 16KB 页面大小支持（Android 15+ 要求）
-# 这确保所有 LOAD 段对齐到 16KB 边界
-target_link_options(MNNWrapper PRIVATE "-Wl,-z,max-page-size=16384")
-target_link_options(MNN PRIVATE "-Wl,-z,max-page-size=16384")
-if(TARGET llm)
-    target_link_options(llm PRIVATE "-Wl,-z,max-page-size=16384")
-endif()
+# NDK r27: max+common on real SHARED ELF (MNN, MNNWrapper). Skip OBJECT llm.
+xiaohei_apply_16kb_page_size_graph(MNNWrapper)
+xiaohei_apply_16kb_page_size_tree()
 

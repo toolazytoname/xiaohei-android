@@ -1,0 +1,11 @@
+--- a/source/backend/opencl/execution/buffer/AttentionBufExecution.cpp
++++ b/source/backend/opencl/execution/buffer/AttentionBufExecution.cpp
+@@ -13,6 +13,8 @@
+ #include <fstream>
+ namespace MNN {
+ namespace OpenCL {
++
++constexpr int AttentionBufExecution::kFdChunk;
+ 
+ // Which prefill implementation onResize picks. Persisted in the tune cache, so the
+ // values are part of the on-disk format: only append. 0 was short prefill, deleted --

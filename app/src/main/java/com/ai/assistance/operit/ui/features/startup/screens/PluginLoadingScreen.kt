@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.IntOffset
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseStartupPolicy
 import com.ai.assistance.operit.data.mcp.MCPLocalServer
 import com.ai.assistance.operit.data.mcp.MCPRepository
 import com.ai.assistance.operit.data.mcp.plugins.MCPStarter
@@ -727,6 +728,12 @@ class PluginLoadingState {
 
     // 添加方法来初始化MCP服务器并启动插件
     fun initializeMCPServer(context: Context, lifecycleScope: kotlinx.coroutines.CoroutineScope) {
+        if (CommonBaseStartupPolicy.skipTerminalMcpRuntimePrep()) {
+            AppLogger.d("PluginLoadingState", "common-base skips MCP/terminal runtime prep")
+            hide()
+            return
+        }
+
         if (!mcpInitInProgress.compareAndSet(false, true)) {
             AppLogger.d("PluginLoadingState", "initializeMCPServer already running, skipping")
             return

@@ -26,6 +26,7 @@ import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.voice.SimpleVoiceProvider
 import com.ai.assistance.operit.api.voice.VoiceServiceFactory
 import com.ai.assistance.operit.api.voice.VoiceService
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -659,13 +660,15 @@ fun TextToSpeechScreen(navController: NavController) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                if (CommonBaseUiResiduePolicy.showTtsAccessibilityNote()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
 
-                                Text(
-                                        text = stringResource(R.string.tts_accessibility_note),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error
-                                )
+                                        Text(
+                                                text = stringResource(R.string.tts_accessibility_note),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                        )
+                                }
                         }
                 }
         }

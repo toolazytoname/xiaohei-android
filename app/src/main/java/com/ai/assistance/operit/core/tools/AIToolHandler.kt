@@ -2,6 +2,9 @@ package com.ai.assistance.operit.core.tools
 
 import android.content.Context
 import com.ai.assistance.operit.util.AppLogger
+import com.ai.assistance.operit.core.commonbase.CommonBaseExecutionGuard
+import com.ai.assistance.operit.core.commonbase.CommonBaseGatedToolExecutor
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.tools.mcp.MCPManager
 import com.ai.assistance.operit.core.tools.packTool.PackageManager
 import com.ai.assistance.operit.data.model.AITool
@@ -181,7 +184,12 @@ class AIToolHandler private constructor(private val context: Context) {
             descriptionGenerator: ((AITool) -> String)? = null,
             executor: ToolExecutor
     ) {
-        availableTools[name] = executor
+        availableTools[name] =
+                if (CommonBaseProfile.isEnabled) {
+                    CommonBaseGatedToolExecutor(executor)
+                } else {
+                    executor
+                }
 
         // 注册描述生成器（如果提供）
         if (descriptionGenerator != null) {
@@ -312,7 +320,7 @@ class AIToolHandler private constructor(private val context: Context) {
             executor = availableTools[toolName]
         }
 
-        if (executor == null && toolName.contains(':')) {
+        if (executor == null && toolName.contains(':') && !CommonBaseProfile.isEnabled) {
             val packageName = toolName.substringBefore(':', missingDelimiterValue = "")
             if (packageName.isNotBlank()) {
                 try {
@@ -330,7 +338,7 @@ class AIToolHandler private constructor(private val context: Context) {
             }
         }
 
-        if (executor != null && toolName.contains(':')) {
+        if (executor != null && toolName.contains(':') && !CommonBaseProfile.isEnabled) {
             val packageName = toolName.substringBefore(':', missingDelimiterValue = "")
             if (packageName.isNotBlank()) {
                 try {
@@ -370,6 +378,12 @@ class AIToolHandler private constructor(private val context: Context) {
                 notifyToolExecutionFinished(tool)
                 return interceptedResult
             }
+        }
+
+        CommonBaseExecutionGuard.resultFor(tool)?.let { restrictedResult ->
+            notifyToolExecutionResult(tool, restrictedResult)
+            notifyToolExecutionFinished(tool)
+            return restrictedResult
         }
 
         val executor = getToolExecutorOrActivate(tool.name)
@@ -427,6 +441,13 @@ class AIToolHandler private constructor(private val context: Context) {
                 emit(interceptedResult)
                 return@flow
             }
+        }
+
+        CommonBaseExecutionGuard.resultFor(tool)?.let { restrictedResult ->
+            notifyToolExecutionResult(tool, restrictedResult)
+            notifyToolExecutionFinished(tool)
+            emit(restrictedResult)
+            return@flow
         }
 
         val executor = getToolExecutorOrActivate(tool.name)

@@ -107,6 +107,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
 import com.ai.assistance.operit.api.chat.EnhancedAIService
 import com.ai.assistance.operit.api.chat.library.MemoryAutoSaveScheduler
 import com.ai.assistance.operit.core.tools.ToolProgressBus
@@ -2487,6 +2488,7 @@ private fun AgentExtraSettingsPopup(
                         },
                     )
 
+                    if (CommonBaseNavigationPolicy.allowsScreenType(typeName = "Packages")) {
                     AgentPluginSettingsGroupItem(
                         toggles = pluginInputMenuToggles,
                         expanded = showPluginDropdown,
@@ -2498,6 +2500,7 @@ private fun AgentExtraSettingsPopup(
                                     context.getString(R.string.manage_packages)
                         },
                     )
+                    }
                 }
             }
             ToolPromptManagerDialog(

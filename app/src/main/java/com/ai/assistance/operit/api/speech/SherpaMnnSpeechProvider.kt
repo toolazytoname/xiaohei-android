@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.util.AppLogger
 import com.k2fsa.sherpa.mnn.*
 import com.ai.assistance.operit.api.speech.SpeechPrerollStore
@@ -71,6 +72,13 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
 
     override suspend fun initialize(): Boolean {
         if (isInitialized.value) return true
+        if (CommonBaseProfile.storeNativeTrim) {
+            AppLogger.w(TAG, "sherpa-mnn is not packaged in the store profile")
+            _recognitionState.value = SpeechService.RecognitionState.ERROR
+            _recognitionError.value =
+                    SpeechService.RecognitionError(-1, "sherpa-mnn is unavailable in the store profile")
+            return false
+        }
         AppLogger.d(TAG, "Initializing sherpa-mnn...")
         return try {
             withContext(Dispatchers.IO) {

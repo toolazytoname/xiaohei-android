@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.util.AppLogger
 import androidx.annotation.WorkerThread
 import com.google.mlkit.vision.common.InputImage
@@ -141,6 +142,17 @@ object OCRUtils {
             language: Language = Language.LATIN,
             quality: Quality = Quality.LOW
     ): OCRResult {
+        if (CommonBaseProfile.storeNativeTrim) {
+            return OCRResult.Error("OCR is not available in the store profile.")
+        }
+        return recognizeTextFromBitmapLoaded(bitmap, language, quality)
+    }
+
+    private suspend fun recognizeTextFromBitmapLoaded(
+            bitmap: Bitmap,
+            language: Language,
+            quality: Quality
+    ): OCRResult {
         val processedBitmap =
                 if (quality == Quality.HIGH) {
                     preprocessBitmap(bitmap)
@@ -178,6 +190,18 @@ object OCRUtils {
             uri: Uri,
             language: Language = Language.LATIN,
             quality: Quality = Quality.LOW
+    ): OCRResult {
+        if (CommonBaseProfile.storeNativeTrim) {
+            return OCRResult.Error("OCR is not available in the store profile.")
+        }
+        return recognizeTextFromUriLoaded(context, uri, language, quality)
+    }
+
+    private suspend fun recognizeTextFromUriLoaded(
+            context: Context,
+            uri: Uri,
+            language: Language,
+            quality: Quality
     ): OCRResult {
         // 低质量模式直接使用MLKit的API，效率更高
         if (quality == Quality.LOW) {

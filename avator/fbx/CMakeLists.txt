@@ -3,13 +3,14 @@ cmake_minimum_required(VERSION 3.22.1)
 project("fbx_jni")
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/operit_git_source.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/xiaohei_page_size.cmake")
 
 operit_prepare_git_source(
     OPERIT_UFBX_SOURCE_DIR
     OPERIT_UFBX_BINARY_DIR
     ufbx
     "https://github.com/ufbx/ufbx.git"
-    "main"
+    "5955c5c0b042ac2dc6f32955ab206aaec0620cfc"
 )
 
 add_library(
@@ -39,4 +40,4 @@ target_link_libraries(
     log
 )
 
-target_link_options(FbxWrapper PRIVATE "-Wl,-z,max-page-size=16384")
+xiaohei_apply_16kb_page_size(FbxWrapper)

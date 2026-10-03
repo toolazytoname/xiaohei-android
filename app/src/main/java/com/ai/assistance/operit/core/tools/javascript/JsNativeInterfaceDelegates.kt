@@ -11,6 +11,8 @@ import android.text.TextPaint
 import android.text.TextUtils
 import android.util.Base64
 import com.ai.assistance.operit.core.tools.AIToolHandler
+import com.ai.assistance.operit.core.commonbase.CommonBaseCapabilityPolicy
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.tools.BinaryResultData
 import com.ai.assistance.operit.core.tools.BooleanResultData
 import com.ai.assistance.operit.core.tools.IntResultData
@@ -277,6 +279,9 @@ internal object JsNativeInterfaceDelegates {
     }
 
     fun usePackage(packageManager: PackageManager, packageName: String): String {
+        if (CommonBaseProfile.isEnabled) {
+            return CommonBaseCapabilityPolicy.packageActivationDeniedMessage(packageName)
+        }
         return guard("package activation failed", "Error using package from JS: $packageName") {
             val normalized = normalizeNonBlank(packageName) ?: return@guard "Package name is required"
             packageManager.usePackage(normalized)

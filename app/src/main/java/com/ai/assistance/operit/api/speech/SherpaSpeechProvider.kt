@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.OperitPaths
 import com.k2fsa.sherpa.ncnn.*
@@ -41,10 +42,65 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
     private var recognizer: SherpaNcnn? = null
     private var vad: OnnxSileroVad? = null
     private var audioRecord: AudioRecord? = null
+    private var echoCanceler: AcousticEchoCanceler? = null
     private var recordingJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Default)
 
+    private fun releaseEchoCanceler() {
+        val fx = echoCanceler
+        echoCanceler = null
+        if (fx == null) return
+        try {
+            fx.enabled = false
+        } catch (_: Exception) {
+        }
+        try {
+            fx.release()
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Error releasing AcousticEchoCanceler", e)
+        }
+    }
+
+    private fun attachEchoCanceler(record: AudioRecord) {
+        releaseEchoCanceler()
+        val available =
+            try {
+                AcousticEchoCanceler.isAvailable()
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "AcousticEchoCanceler.isAvailable failed", e)
+                false
+            }
+        if (!available) {
+            AppLogger.d(
+                TAG,
+                "System AEC unavailable; VOICE_COMMUNICATION may still enable HAL AEC on some devices",
+            )
+            return
+        }
+        try {
+            val created = AcousticEchoCanceler.create(record.audioSessionId)
+            if (created == null) {
+                AppLogger.w(
+                    TAG,
+                    "AcousticEchoCanceler.create returned null session=${record.audioSessionId}",
+                )
+                return
+            }
+            created.enabled = true
+            echoCanceler = created
+            AppLogger.d(
+                TAG,
+                "System AEC enabled session=${record.audioSessionId}; not guaranteed on all devices",
+            )
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Failed to enable AcousticEchoCanceler", e)
+            releaseEchoCanceler()
+        }
+    }
+
     private fun clearAndReleaseAudioRecord() {
+        // Release the effect before AudioRecord.release() so the session id is still valid.
+        releaseEchoCanceler()
         val record = audioRecord
         audioRecord = null
 
@@ -94,6 +150,28 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
 
     private val initializeMutex = Mutex()
     private val recognitionMutex = Mutex()
+
+    private val recognitionSequence = java.util.concurrent.atomic.AtomicLong()
+
+    /** Distinguish repeated utterances without manufacturing a confidence estimate. */
+    private fun publishRecognitionResult(text: String, isFinal: Boolean) {
+        _recognitionResult.value = SpeechService.RecognitionResult(
+            text = text,
+            isFinal = isFinal,
+            eventSequence = recognitionSequence.incrementAndGet(),
+        )
+    }
+
+    /**
+     * JNI Reset(recreate=true) replaces the decoder stream via CreateStream().
+     * Reset(false) only advances frame counters; it does not clear FeatureExtractor
+     * InputFinished or encoder states. Required after inputFinished() so the same
+     * AudioRecord can feed the next VAD segment.
+     */
+    private fun refreshDecoderStream(recognizerInstance: SherpaNcnn, reason: String) {
+        recognizerInstance.reset(true)
+        AppLogger.d(TAG, "Refreshed decoder stream recreate=true reason=$reason")
+    }
 
     override suspend fun initialize(): Boolean {
         if (isInitialized.value) return true
@@ -247,7 +325,8 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
             _recognitionState.value = SpeechService.RecognitionState.PREPARING
             // 清空上一轮的识别结果，避免新的订阅者立刻收到旧的 StateFlow 值
             _recognitionResult.value = SpeechService.RecognitionResult(text = "", isFinal = false, confidence = 0f)
-            recognizer?.reset(false) // 使用SherpaNcnn中的reset方法，参数为false不重新创建识别器
+            // Previous stop/VAD may have called inputFinished(); recreate the stream.
+            recognizer?.let { refreshDecoderStream(it, "start-recognition") }
 
             val pendingPcm = SpeechPrerollStore.consumePending()
             if (pendingPcm != null && pendingPcm.isNotEmpty()) {
@@ -302,6 +381,7 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
                 _recognitionError.value = SpeechService.RecognitionError(-4, e.message ?: "AudioRecord start failed")
                 return@withLock false
             }
+            attachEchoCanceler(recordInstance)
             _recognitionState.value = SpeechService.RecognitionState.RECOGNIZING
             // 重置音量
             currentVolume = 0f
@@ -329,6 +409,48 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
                         val vadFrame = ShortArray(vadFrameSize)
                         var vadFramePos = 0
                         var vadSpeechActive = false
+                        // 8 * 512 samples = 256ms at 16 kHz. Local to this job; released on cancel/stop.
+                        val vadHeadCapacity = 8
+                        val vadHeadRing = Array(vadHeadCapacity) { ShortArray(vadFrameSize) }
+                        var vadHeadCount = 0
+                        var vadHeadStart = 0
+
+                        fun clearVadHeadRing() {
+                            vadHeadCount = 0
+                            vadHeadStart = 0
+                        }
+
+                        fun storeRejectedVadFrame() {
+                            if (vadHeadCount == vadHeadCapacity) {
+                                vadHeadStart = (vadHeadStart + 1) % vadHeadCapacity
+                                vadHeadCount -= 1
+                            }
+                            val slot = (vadHeadStart + vadHeadCount) % vadHeadCapacity
+                            java.lang.System.arraycopy(vadFrame, 0, vadHeadRing[slot], 0, vadFrameSize)
+                            vadHeadCount += 1
+                        }
+
+                        fun flushVadHeadRing(recognizerInstance: SherpaNcnn) {
+                            val flushed = vadHeadCount
+                            var i = 0
+                            while (i < vadHeadCount) {
+                                val slot = (vadHeadStart + i) % vadHeadCapacity
+                                val src = vadHeadRing[slot]
+                                val preroll = FloatArray(vadFrameSize) { j -> src[j] / 32768.0f }
+                                recognizerInstance.acceptSamples(preroll)
+                                while (recognizerInstance.isReady()) {
+                                    recognizerInstance.decode()
+                                }
+                                i += 1
+                            }
+                            clearVadHeadRing()
+                            if (flushed > 0) {
+                                AppLogger.d(
+                                    TAG,
+                                    "Flushed VAD head buffer frames=$flushed samples=${flushed * vadFrameSize}",
+                                )
+                            }
+                        }
 
                         while (isActive &&
                                 _recognitionState.value == SpeechService.RecognitionState.RECOGNIZING) {
@@ -357,17 +479,16 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
 
                                     if (text.isNotBlank()) {
                                         if (isEndpoint) {
-                                            lastText = text
-                                            _recognitionResult.value =
-                                                SpeechService.RecognitionResult(text = text, isFinal = true)
+                                            publishRecognitionResult(text, isFinal = true)
                                         } else if (partialResults && lastText != text) {
                                             lastText = text
-                                            _recognitionResult.value =
-                                                SpeechService.RecognitionResult(text = text, isFinal = false)
+                                            publishRecognitionResult(text, isFinal = false)
                                         }
                                     }
 
                                     if (isEndpoint) {
+                                        lastText = ""
+                                        // Endpoint path never calls inputFinished(); keep encoder state.
                                         recognizerInstance.reset(false)
                                         if (!continuousMode) {
                                             _recognitionState.value = SpeechService.RecognitionState.IDLE
@@ -386,6 +507,9 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
                                             val isSpeech = vadInstance.isSpeech(vadFrame)
 
                                             if (isSpeech) {
+                                                if (!vadSpeechActive) {
+                                                    flushVadHeadRing(recognizerInstance)
+                                                }
                                                 vadSpeechActive = true
 
                                                 val frameSamples = FloatArray(vadFrameSize) { i -> vadFrame[i] / 32768.0f }
@@ -397,8 +521,7 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
                                                 val text = recognizerInstance.text
                                                 if (partialResults && text.isNotBlank() && lastText != text) {
                                                     lastText = text
-                                                    _recognitionResult.value =
-                                                        SpeechService.RecognitionResult(text = text, isFinal = false)
+                                                    publishRecognitionResult(text, isFinal = false)
                                                 }
                                             } else if (vadSpeechActive) {
                                                 recognizerInstance.inputFinished()
@@ -408,19 +531,22 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
 
                                                 val finalText = recognizerInstance.text
                                                 if (finalText.isNotBlank()) {
-                                                    lastText = finalText
-                                                    _recognitionResult.value =
-                                                        SpeechService.RecognitionResult(text = finalText, isFinal = true)
+                                                    publishRecognitionResult(finalText, isFinal = true)
                                                 }
+                                                lastText = ""
 
-                                                recognizerInstance.reset(false)
+                                                // Same AudioRecord; new decoder stream after InputFinished.
+                                                refreshDecoderStream(recognizerInstance, "vad-segment")
                                                 vadInstance.reset()
                                                 vadSpeechActive = false
+                                                clearVadHeadRing()
 
                                                 if (!continuousMode) {
                                                     _recognitionState.value = SpeechService.RecognitionState.IDLE
                                                     return@launch
                                                 }
+                                            } else {
+                                                storeRejectedVadFrame()
                                             }
 
                                             vadFramePos = 0
@@ -468,7 +594,8 @@ class SherpaSpeechProvider(private val context: Context) : SpeechService {
                 try {
                     recognizer?.inputFinished()
                     val text = recognizer?.text ?: ""
-                    _recognitionResult.value = SpeechService.RecognitionResult(text = text, isFinal = true)
+                    publishRecognitionResult(text, isFinal = true)
+                    recognizer?.let { refreshDecoderStream(it, "stop-recognition") }
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "Finalize recognition failed", e)
                 }

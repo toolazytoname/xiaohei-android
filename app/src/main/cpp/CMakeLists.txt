@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project(streamnative)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/operit_git_source.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/xiaohei_page_size.cmake")
 
 function(force_release_flags_for_debug target_name)
     if(TARGET ${target_name})
@@ -13,12 +14,7 @@ function(force_release_flags_for_debug target_name)
 endfunction()
 
 function(enable_16kb_page_alignment target_name)
-    if(TARGET ${target_name})
-        target_link_options(${target_name} PRIVATE
-                "-Wl,-z,max-page-size=16384"
-                "-Wl,-z,common-page-size=16384"
-        )
-    endif()
+    xiaohei_apply_16kb_page_size_graph(${target_name})
 endfunction()
 
 function(resolve_wamr_android_target output_var)
@@ -42,7 +38,7 @@ if(ANDROID)
             OPERIT_SHERPA_NCNN_BINARY_DIR
             sherpa_ncnn
             "https://github.com/k2-fsa/sherpa-ncnn.git"
-            "master"
+            "c61e50d61e9fbed5972afa4d95bc560e168affe2"
     )
 
     list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -186,4 +182,7 @@ endif()
 enable_16kb_page_alignment(streamnative)
 if(ANDROID)
     enable_16kb_page_alignment(toolpkgwasm)
+    # sherpa-ncnn-jni is the actual SHARED JNI target (libsherpa-ncnn-jni.so).
+    enable_16kb_page_alignment(sherpa-ncnn-jni)
+    xiaohei_apply_16kb_page_size_tree()
 endif()

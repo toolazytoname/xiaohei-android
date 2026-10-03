@@ -2,6 +2,7 @@ package com.ai.assistance.operit.ui.main
 
 import android.Manifest
 import android.app.ActivityManager
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -14,6 +15,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import com.ai.assistance.operit.ui.features.chat.components.CameraCaptureHost
+import com.ai.assistance.operit.ui.features.chat.components.CameraCaptureResults
+import com.ai.assistance.operit.ui.features.chat.components.CameraCaptureState
+import com.ai.assistance.operit.ui.features.chat.components.PendingCameraCapture
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AlertDialog
@@ -36,7 +41,9 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.chat.AIForegroundService
 import com.ai.assistance.operit.core.application.OperitApplication
+import com.ai.assistance.operit.core.commonbase.CommonBaseStartupPolicy
 import com.ai.assistance.operit.core.tools.AIToolHandler
+import com.ai.assistance.operit.core.tools.system.AndroidPermissionLevel
 import com.ai.assistance.operit.data.preferences.AgreementPreferences
 import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
 import com.ai.assistance.operit.data.preferences.androidPermissionPreferences
@@ -58,6 +65,7 @@ import java.util.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import com.ai.assistance.operit.data.mcp.MCPRepository
 import android.content.Intent
 import android.net.Uri
@@ -65,7 +73,7 @@ import androidx.compose.ui.res.stringResource
 import com.ai.assistance.operit.widget.ToolPkgDesktopWidgetHost
 import org.json.JSONObject
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), CameraCaptureHost {
     companion object {
         const val ACTION_OPEN_SETTINGS_SHORTCUT = "com.ai.assistance.operit.action.OPEN_SETTINGS_SHORTCUT"
     }
@@ -82,7 +90,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var agreementPreferences: AgreementPreferences
     private var updateCheckPerformed = false
     private lateinit var anrMonitor: AnrMonitor
-    private lateinit var mcpRepository: MCPRepository
+    private var mcpRepository: MCPRepository? = null
 
     // ======== MCP插件状态 ========
     private val pluginLoadingState = PluginLoadingState()
@@ -117,6 +125,21 @@ class MainActivity : ComponentActivity() {
         } else {
             AppLogger.d(TAG, "通知权限被拒绝")
             Toast.makeText(this, getString(R.string.notification_permission_denied), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // TakePicture must be Activity-owned: Compose launcher keys are saved under a new
+    // RouteEntry.instanceId after process death and never re-register the pending result.
+    private var pendingCameraCapture: PendingCameraCapture? = null
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val capture = pendingCameraCapture
+        pendingCameraCapture = null
+        if (success && capture != null) {
+            CameraCaptureResults.publishSuccess(capture.uri)
+        } else {
+            CameraCaptureState.deletePending(capture)
         }
     }
 
@@ -179,6 +202,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Restore before super.onCreate so a pending TakePicture result dispatched
+        // during Activity setup can still see this capture (cancel deletes only it).
+        pendingCameraCapture = CameraCaptureState.restorePending(this, savedInstanceState)
         super.onCreate(savedInstanceState)
         lastOrientation = resources.configuration.orientation
         AppLogger.d(TAG, "onCreate: Android SDK version: ${Build.VERSION.SDK_INT}")
@@ -222,6 +248,38 @@ class MainActivity : ComponentActivity() {
 
         // 设置双击返回退出
         setupBackPressHandler()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        CameraCaptureState.savePending(outState, pendingCameraCapture)
+    }
+
+    override fun launchExternalTakePicture(capture: PendingCameraCapture) {
+        if (pendingCameraCapture != null) {
+            CameraCaptureState.deletePending(capture)
+            return
+        }
+        pendingCameraCapture = capture
+        try {
+            takePictureLauncher.launch(capture.uri)
+        } catch (e: ActivityNotFoundException) {
+            pendingCameraCapture = null
+            CameraCaptureState.deletePending(capture)
+            Toast.makeText(
+                this,
+                getString(R.string.image_capture_failed, e.message ?: e.javaClass.simpleName),
+                Toast.LENGTH_SHORT
+            ).show()
+        } catch (e: Exception) {
+            pendingCameraCapture = null
+            CameraCaptureState.deletePending(capture)
+            Toast.makeText(
+                this,
+                getString(R.string.image_capture_failed, e.message ?: e.javaClass.simpleName),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -326,16 +384,27 @@ class MainActivity : ComponentActivity() {
         try {
             val displayPreferencesManager =
                 DisplayPreferencesManager.getInstance(this@MainActivity)
-            if (!displayPreferencesManager.startWithNewChat.first()) {
-                return
+            if (displayPreferencesManager.startWithNewChat.first()) {
+                val chatHistoryManager = ChatHistoryManager.getInstance(this@MainActivity)
+                val newChat = chatHistoryManager.createNewChat(
+                    setAsCurrentChat = false
+                )
+                chatHistoryManager.setCurrentChatId(newChat.id)
+                AppLogger.d(TAG, "启动时已创建新的空白聊天")
             }
 
-            val chatHistoryManager = ChatHistoryManager.getInstance(this@MainActivity)
-            val newChat = chatHistoryManager.createNewChat(
-                setAsCurrentChat = false
-            )
-            chatHistoryManager.setCurrentChatId(newChat.id)
-            AppLogger.d(TAG, "启动时已创建新的空白聊天")
+            if (CommonBaseStartupPolicy.createDefaultChatIfHistoryEmpty()) {
+                val chatHistoryManager = ChatHistoryManager.getInstance(this@MainActivity)
+                if (chatHistoryManager.getTotalChatCount() == 0) {
+                    val newChat = chatHistoryManager.createNewChat(
+                        setAsCurrentChat = true
+                    )
+                    AppLogger.d(
+                        TAG,
+                        "common-base created default chat because history was empty: ${newChat.id}"
+                    )
+                }
+            }
         } catch (e: Exception) {
             AppLogger.e(TAG, "启动时创建空白聊天失败", e)
         }
@@ -384,6 +453,12 @@ class MainActivity : ComponentActivity() {
 
     // ======== 启动插件加载 ========
     private fun startPluginLoading() {
+        if (CommonBaseStartupPolicy.skipTerminalMcpRuntimePrep()) {
+            AppLogger.d(TAG, "common-base skips MCP/terminal plugin loading overlay")
+            pluginLoadingState.hide()
+            return
+        }
+
         // 显示插件加载界面
         pluginLoadingState.show()
 
@@ -504,7 +579,9 @@ class MainActivity : ComponentActivity() {
         toolHandler = AIToolHandler.getInstance(this)
 
         // 初始化MCP仓库
-        mcpRepository = MCPRepository(this)
+        if (!CommonBaseStartupPolicy.skipTerminalMcpRuntimePrep()) {
+            mcpRepository = MCPRepository(this)
+        }
 
         anrMonitor = AnrMonitor(this, lifecycleScope)
 
@@ -546,6 +623,13 @@ class MainActivity : ComponentActivity() {
 
     // ======== 检查权限级别设置 ========
     private fun checkPermissionLevelSet() {
+        if (CommonBaseStartupPolicy.skipPermissionGuideForRemovedPermissions()) {
+            ensureCommonBaseStandardPermissionLevel()
+            showPermissionGuide = false
+            AppLogger.d(TAG, "common-base skips storage/location/ROOT permission guide; STANDARD locked")
+            return
+        }
+
         // 检查是否已设置权限级别
         val permissionLevel = androidPermissionPreferences.getPreferredPermissionLevel()
         AppLogger.d(TAG, "当前权限级别: $permissionLevel")
@@ -554,6 +638,15 @@ class MainActivity : ComponentActivity() {
                 TAG,
                 "权限级别检查: 已设置=${!showPermissionGuide}, 将${if(showPermissionGuide) "" else "不"}显示权限引导界面"
         )
+    }
+
+    private fun ensureCommonBaseStandardPermissionLevel() {
+        if (androidPermissionPreferences.getPreferredPermissionLevel() != null) {
+            return
+        }
+        runBlocking {
+            androidPermissionPreferences.savePreferredPermissionLevel(AndroidPermissionLevel.STANDARD)
+        }
     }
 
     // ======== 显示与性能配置 ========

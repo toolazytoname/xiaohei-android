@@ -27,11 +27,13 @@ interface SpeechService {
      * @param text 识别的文本
      * @param isFinal 是否是最终结果
      * @param confidence 置信度 0.0-1.0
+     * @param eventSequence 引擎内事件序号；0 表示未提供，独立于识别置信度
      */
     data class RecognitionResult(
             val text: String,
             val isFinal: Boolean = false,
-            val confidence: Float = 0f
+            val confidence: Float = 0f,
+            val eventSequence: Long = 0L
     )
 
     /** 识别错误类型 */

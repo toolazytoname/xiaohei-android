@@ -30,7 +30,9 @@ class OnlineStream(var ptr: Long = 0) {
 
     companion object {
         init {
-            System.loadLibrary("sherpa-mnn-jni")
+            if (!com.ai.assistance.operit.core.commonbase.CommonBaseProfile.storeNativeTrim) {
+                System.loadLibrary("sherpa-mnn-jni")
+            }
         }
     }
 }

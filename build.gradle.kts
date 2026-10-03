@@ -1,5 +1,5 @@
 buildscript {
-    val objectboxVersion by extra("5.3.0")
+    val objectboxVersion by extra("6.0.0-beta")
     repositories {
         mavenCentral()
     }

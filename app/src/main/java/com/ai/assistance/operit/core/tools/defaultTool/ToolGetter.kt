@@ -1,6 +1,7 @@
 package com.ai.assistance.operit.core.tools.defaultTool
 
 import android.content.Context
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.tools.defaultTool.accessbility.*
 import com.ai.assistance.operit.core.tools.defaultTool.admin.*
 import com.ai.assistance.operit.core.tools.defaultTool.debugger.*
@@ -162,8 +163,9 @@ object ToolGetter {
      * @param context 应用上下文
      * @return FFmpeg工具执行器实现（只有标准版本）
      */
-    fun getFFmpegToolExecutor(context: Context): StandardFFmpegToolExecutor {
-        return StandardFFmpegToolExecutor(context)
+    fun getFFmpegToolExecutor(context: Context): StandardFFmpegToolExecutor? {
+        if (CommonBaseProfile.storeNativeTrim) return null
+        return newFFmpegToolExecutor(context)
     }
 
 
@@ -171,8 +173,9 @@ object ToolGetter {
      * 获取FFmpeg信息工具执行器
      * @return FFmpeg信息工具执行器实现（只有标准版本）
      */
-    fun getFFmpegInfoToolExecutor(): StandardFFmpegInfoToolExecutor {
-        return StandardFFmpegInfoToolExecutor()
+    fun getFFmpegInfoToolExecutor(): StandardFFmpegInfoToolExecutor? {
+        if (CommonBaseProfile.storeNativeTrim) return null
+        return newFFmpegInfoToolExecutor()
     }
 
     /**
@@ -180,7 +183,20 @@ object ToolGetter {
      * @param context 应用上下文
      * @return FFmpeg转换工具执行器实现（只有标准版本）
      */
-    fun getFFmpegConvertToolExecutor(context: Context): StandardFFmpegConvertToolExecutor {
+    fun getFFmpegConvertToolExecutor(context: Context): StandardFFmpegConvertToolExecutor? {
+        if (CommonBaseProfile.storeNativeTrim) return null
+        return newFFmpegConvertToolExecutor(context)
+    }
+
+    private fun newFFmpegToolExecutor(context: Context): StandardFFmpegToolExecutor {
+        return StandardFFmpegToolExecutor(context)
+    }
+
+    private fun newFFmpegInfoToolExecutor(): StandardFFmpegInfoToolExecutor {
+        return StandardFFmpegInfoToolExecutor()
+    }
+
+    private fun newFFmpegConvertToolExecutor(context: Context): StandardFFmpegConvertToolExecutor {
         return StandardFFmpegConvertToolExecutor(context)
     }
 

@@ -2,6 +2,8 @@ package com.ai.assistance.operit.core.config
 
 import com.ai.assistance.operit.core.chat.hooks.PromptHookContext
 import com.ai.assistance.operit.core.chat.hooks.PromptHookRegistry
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
+import com.ai.assistance.operit.core.commonbase.CommonBaseToolCatalog
 import com.ai.assistance.operit.data.model.SystemToolPromptCategory
 import com.ai.assistance.operit.data.model.ToolPrompt
 import com.ai.assistance.operit.data.model.ToolParameterSchema
@@ -503,6 +505,9 @@ object SystemToolPrompts {
         chatModelHasDirectVideo: Boolean = false,
         safBookmarkNames: List<String> = emptyList()
     ): List<SystemToolPromptCategory> {
+        if (CommonBaseProfile.isEnabled) {
+            return CommonBaseToolCatalog.promptCategoriesEn
+        }
         val shouldExposeIntent =
             (hasBackendImageRecognition && !chatModelHasDirectImage) ||
                 (hasBackendAudioRecognition && !chatModelHasDirectAudio) ||
@@ -553,6 +558,17 @@ object SystemToolPrompts {
         chatModelHasDirectVideo: Boolean = false,
         safBookmarkNames: List<String> = emptyList()
     ): List<SystemToolPromptCategory> {
+        if (CommonBaseProfile.isEnabled) {
+            return getAIAllCategoriesEn(
+                hasBackendImageRecognition = hasBackendImageRecognition,
+                chatModelHasDirectImage = chatModelHasDirectImage,
+                hasBackendAudioRecognition = hasBackendAudioRecognition,
+                hasBackendVideoRecognition = hasBackendVideoRecognition,
+                chatModelHasDirectAudio = chatModelHasDirectAudio,
+                chatModelHasDirectVideo = chatModelHasDirectVideo,
+                safBookmarkNames = safBookmarkNames
+            )
+        }
         return getAIAllCategoriesEn(
             hasBackendImageRecognition = hasBackendImageRecognition,
             chatModelHasDirectImage = chatModelHasDirectImage,
@@ -578,6 +594,9 @@ object SystemToolPrompts {
         chatModelHasDirectVideo: Boolean = false,
         safBookmarkNames: List<String> = emptyList()
     ): List<SystemToolPromptCategory> {
+        if (CommonBaseProfile.isEnabled) {
+            return CommonBaseToolCatalog.promptCategoriesCn
+        }
         val shouldExposeIntent =
             (hasBackendImageRecognition && !chatModelHasDirectImage) ||
                 (hasBackendAudioRecognition && !chatModelHasDirectAudio) ||
@@ -628,6 +647,17 @@ object SystemToolPrompts {
         chatModelHasDirectVideo: Boolean = false,
         safBookmarkNames: List<String> = emptyList()
     ): List<SystemToolPromptCategory> {
+        if (CommonBaseProfile.isEnabled) {
+            return getAIAllCategoriesCn(
+                hasBackendImageRecognition = hasBackendImageRecognition,
+                chatModelHasDirectImage = chatModelHasDirectImage,
+                hasBackendAudioRecognition = hasBackendAudioRecognition,
+                hasBackendVideoRecognition = hasBackendVideoRecognition,
+                chatModelHasDirectAudio = chatModelHasDirectAudio,
+                chatModelHasDirectVideo = chatModelHasDirectVideo,
+                safBookmarkNames = safBookmarkNames
+            )
+        }
         return getAIAllCategoriesCn(
             hasBackendImageRecognition = hasBackendImageRecognition,
             chatModelHasDirectImage = chatModelHasDirectImage,
@@ -678,9 +708,16 @@ object SystemToolPrompts {
 
     fun getManageableToolPrompts(
         useEnglish: Boolean,
-        toolOrder: List<String> = emptyList()
+        toolOrder: List<String> = emptyList(),
+        enabled: Boolean = CommonBaseProfile.isEnabled
     ): List<ManageableToolPrompt> {
-        val baseCategories = if (useEnglish) {
+        val baseCategories = if (enabled) {
+            if (useEnglish) {
+                CommonBaseToolCatalog.promptCategoriesEn
+            } else {
+                CommonBaseToolCatalog.promptCategoriesCn
+            }
+        } else if (useEnglish) {
             listOf(basicTools, fileSystemTools, httpTools, memoryTools)
         } else {
             listOf(basicToolsCn, fileSystemToolsCn, httpToolsCn, memoryToolsCn)
@@ -711,6 +748,9 @@ object SystemToolPrompts {
     fun generateMemoryToolsPromptEn(
         toolVisibility: Map<String, Boolean> = emptyMap()
     ): String {
+        if (CommonBaseProfile.isEnabled) {
+            return ""
+        }
         return applyToolVisibility(listOf(memoryTools), toolVisibility)
             .firstOrNull()
             ?.toString()
@@ -720,6 +760,9 @@ object SystemToolPrompts {
     fun generateMemoryToolsPromptCn(
         toolVisibility: Map<String, Boolean> = emptyMap()
     ): String {
+        if (CommonBaseProfile.isEnabled) {
+            return ""
+        }
         return applyToolVisibility(listOf(memoryToolsCn), toolVisibility)
             .firstOrNull()
             ?.toString()
@@ -822,6 +865,27 @@ object SystemToolPrompts {
         val categoryFooter: String,
         val tools: MutableList<ToolPrompt> = mutableListOf()
     )
+
+    private fun restrictAvailableToolsForCommonBase(
+        availableTools: List<Map<String, Any?>>
+    ): List<Map<String, Any?>> {
+        if (!CommonBaseProfile.isEnabled) {
+            return availableTools
+        }
+        return availableTools.filter { tool ->
+            val name = tool["name"] as? String
+            name != null && CommonBaseToolCatalog.isPromisedTool(name)
+        }
+    }
+
+    private fun finishToolPrompt(afterContext: PromptHookContext): String {
+        val availableTools = restrictAvailableToolsForCommonBase(afterContext.availableTools)
+        if (CommonBaseProfile.isEnabled) {
+            return renderToolPromptFromAvailableTools(availableTools)
+        }
+        return afterContext.toolPrompt
+            ?: renderToolPromptFromAvailableTools(afterContext.availableTools)
+    }
     
     /**
      * 生成完整的工具提示词文本（英文）
@@ -910,8 +974,7 @@ object SystemToolPrompts {
                     availableTools = currentAvailableTools
                 )
             )
-        return afterContext.toolPrompt
-            ?: renderToolPromptFromAvailableTools(afterContext.availableTools)
+        return finishToolPrompt(afterContext)
     }
     
     /**
@@ -1001,7 +1064,6 @@ object SystemToolPrompts {
                     availableTools = currentAvailableTools
                 )
             )
-        return afterContext.toolPrompt
-            ?: renderToolPromptFromAvailableTools(afterContext.availableTools)
+        return finishToolPrompt(afterContext)
     }
 }

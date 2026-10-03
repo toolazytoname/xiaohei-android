@@ -26,8 +26,14 @@ android {
                 arguments += listOf(
                     "-DANDROID_STL=c++_static",
                     "-DANDROID_PLATFORM=android-26",
-                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                    "-DOPERIT_UFBX_GIT_REF=5955c5c0b042ac2dc6f32955ab206aaec0620cfc"
                 )
+                // Optional verified local source for offline builds; never resolve a moving main ref.
+                providers.gradleProperty("xiaoheiUfbxSourceDir").orNull?.let { sourceDir ->
+                    require(file(sourceDir).resolve("ufbx.c").isFile) { "Invalid local ufbx source" }
+                    arguments += "-DFETCHCONTENT_SOURCE_DIR_UFBX=${file(sourceDir).absolutePath}"
+                }
             }
         }
     }

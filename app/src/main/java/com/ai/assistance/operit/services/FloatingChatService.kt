@@ -23,6 +23,9 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import com.ai.assistance.operit.core.application.ForegroundServiceCompat
 import com.ai.assistance.operit.core.application.OperitApplication
+import com.ai.assistance.operit.api.speech.SpeechService
+import com.ai.assistance.operit.core.devicebridge.DspAndroidBridge
+import com.ai.assistance.operit.core.devicebridge.DspAudioSettlePolicy
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.chat.AIForegroundService
 import com.ai.assistance.operit.api.chat.ChatRuntimeHolder
@@ -55,6 +58,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class FloatingChatService : Service(), FloatingWindowCallback {
@@ -94,6 +98,8 @@ class FloatingChatService : Service(), FloatingWindowCallback {
     private val gson = Gson()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var hasHandledStartCommand = false
+    @Volatile private var dspCleanupStarted = false
+    @Volatile private var dspExitToken: Long = -1L
 
     companion object {
         @Volatile
@@ -604,19 +610,7 @@ class FloatingChatService : Service(), FloatingWindowCallback {
             }
 
             try {
-                CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                    try {
-                        try {
-                            SpeechServiceFactory.getInstance(applicationContext).cancelRecognition()
-                        } catch (_: Exception) {
-                        }
-                        try {
-                            VoiceServiceFactory.getInstance(applicationContext).stop()
-                        } catch (_: Exception) {
-                        }
-                    } catch (_: Exception) {
-                    }
-                }
+                beginDspSessionCleanup()
             } catch (_: Exception) {
             }
             
@@ -655,16 +649,7 @@ class FloatingChatService : Service(), FloatingWindowCallback {
         } catch (_: Exception) {
         }
         try {
-            serviceScope.launch(Dispatchers.IO) {
-                try {
-                    try {
-                        SpeechServiceFactory.getInstance(applicationContext).cancelRecognition()
-                    } catch (_: Exception) {
-                    }
-                    VoiceServiceFactory.getInstance(applicationContext).stop()
-                } catch (_: Exception) {
-                }
-            }
+            beginDspSessionCleanup()
         } catch (_: Exception) {
         }
         try {
@@ -814,5 +799,60 @@ class FloatingChatService : Service(), FloatingWindowCallback {
      * @return ChatServiceCore 聊天服务核心实例
      */
     fun getChatCore(): ChatServiceCore = chatCore
+
+    private fun beginDspSessionCleanup() {
+        if (!DspAndroidBridge.isEnhancedDevice()) {
+            return
+        }
+        if (dspCleanupStarted) {
+            return
+        }
+        dspCleanupStarted = true
+        val token = DspAndroidBridge.onSessionExitRequested()
+        dspExitToken = token
+        val app = applicationContext
+        Thread(
+            {
+                val asrOk: Boolean
+                val ttsOk: Boolean
+                runBlocking {
+                    asrOk = cancelRecognitionForDsp(app)
+                    ttsOk = stopTtsForDsp(app)
+                }
+                if (DspAudioSettlePolicy.maySettle(asrOk, ttsOk)) {
+                    DspAndroidBridge.onSessionAudioSettled(app, token)
+                } else {
+                    DspAndroidBridge.onSessionAudioSettleFailed(app, token)
+                    AppLogger.d(TAG, "dsp audio stop not settled asr=$asrOk tts=$ttsOk")
+                }
+            },
+            "dsp-audio-cleanup"
+        ).apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    private suspend fun cancelRecognitionForDsp(app: Context): Boolean {
+        return try {
+            val speech = SpeechServiceFactory.getInstance(app)
+            speech.cancelRecognition()
+            !speech.isRecognizing &&
+                speech.currentState != SpeechService.RecognitionState.RECOGNIZING &&
+                speech.currentState != SpeechService.RecognitionState.PROCESSING
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private suspend fun stopTtsForDsp(app: Context): Boolean {
+        return try {
+            val voice = VoiceServiceFactory.getInstance(app)
+            val stopped = voice.stop()
+            stopped && !voice.isSpeaking
+        } catch (_: Exception) {
+            false
+        }
+    }
 
 }

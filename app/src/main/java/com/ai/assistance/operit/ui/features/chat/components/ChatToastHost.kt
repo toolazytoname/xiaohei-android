@@ -95,7 +95,7 @@ fun ChatToastHost(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_simple_foreground),
+                        painter = painterResource(id = R.drawable.ic_launcher_xiaohei_foreground),
                         contentDescription = null,
                         modifier = Modifier
                             .size(36.dp),

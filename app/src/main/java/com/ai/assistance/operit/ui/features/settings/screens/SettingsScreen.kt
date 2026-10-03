@@ -21,6 +21,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseNavigationPolicy
+import com.ai.assistance.operit.ui.features.settings.components.EnhancedDspSettingsCard
 import com.ai.assistance.operit.core.tools.defaultTool.standard.CookiePrivacyManager
 import com.ai.assistance.operit.data.model.FunctionType
 import com.ai.assistance.operit.data.preferences.GitHubAuthPreferences
@@ -61,6 +63,12 @@ fun SettingsScreen(
         val scope = rememberCoroutineScope()
         var showGitHubLogin by remember { mutableStateOf(false) }
         var showClearCookieConfirm by remember { mutableStateOf(false) }
+        val showGitHubAccount =
+                CommonBaseNavigationPolicy.allowsScreenType(typeName = "GitHubAccount")
+        val showToolPermission =
+                CommonBaseNavigationPolicy.allowsScreenType(typeName = "ToolPermission")
+        val showExternalHttpChat =
+                CommonBaseNavigationPolicy.allowsScreenType(typeName = "ExternalHttpChatSettings")
 
         val isGitHubLoggedIn = githubAuth.isLoggedInFlow.collectAsState(initial = false).value
         val gitHubUser = githubAuth.userInfoFlow.collectAsState(initial = null).value
@@ -88,6 +96,7 @@ fun SettingsScreen(
                         .verticalScroll(scrollState)
         ) {
                 // ======= 账号 =======
+                if (showGitHubAccount) {
                 SettingsSection(
                         title = stringResource(id = R.string.settings_section_account),
                         icon = Icons.Default.AccountCircle,
@@ -127,6 +136,7 @@ fun SettingsScreen(
                         GitHubLoginDialog(
                                 onDismissRequest = { showGitHubLogin = false }
                         )
+                }
                 }
 
                 // ======= 个性化配置 =======
@@ -200,6 +210,8 @@ fun SettingsScreen(
                         
                 }
 
+                EnhancedDspSettingsCard(containerColor = cardContainerColor)
+
                 // ======= 提示词配置 =======
                 SettingsSection(
                         title = stringResource(R.string.settings_prompt_section),
@@ -250,12 +262,14 @@ fun SettingsScreen(
                         icon = Icons.Default.Security,
                         containerColor = cardContainerColor
                 ) {
+                        if (showToolPermission) {
                         CompactSettingsItem(
                                 title = stringResource(id = R.string.settings_tool_permissions),
                                 subtitle = stringResource(id = R.string.settings_tool_permissions_subtitle),
                                 icon = Icons.Default.AdminPanelSettings,
                                 onClick = navigateToToolPermissions
                         )
+                        }
 
                         CompactSettingsItem(
                                 title = stringResource(id = R.string.settings_data_backup),
@@ -294,6 +308,7 @@ fun SettingsScreen(
                 }
 
                 // ======= 外部调用 =======
+                if (showExternalHttpChat) {
                 SettingsSection(
                         title = stringResource(id = R.string.settings_section_external_calls),
                         icon = Icons.Default.SettingsEthernet,
@@ -305,6 +320,7 @@ fun SettingsScreen(
                                 icon = Icons.Default.SettingsEthernet,
                                 onClick = navigateToExternalHttpChatSettings
                         )
+                }
                 }
 
                 // 底部间距

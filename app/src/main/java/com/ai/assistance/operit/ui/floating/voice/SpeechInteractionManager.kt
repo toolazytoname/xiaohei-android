@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Context.INPUT_METHOD_SERVICE
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.BuildConfig
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.runtime.getValue
@@ -15,12 +16,15 @@ import com.ai.assistance.operit.api.speech.SpeechPrerollStore
 import com.ai.assistance.operit.api.speech.WakePhraseSnapshot
 import com.ai.assistance.operit.api.speech.SpeechServiceFactory
 import com.ai.assistance.operit.api.voice.VoiceServiceFactory
+import com.ai.assistance.operit.core.devicebridge.DspAndroidBridge
+import com.ai.assistance.operit.core.devicebridge.DspListenStartController
 import com.ai.assistance.operit.util.TtsCleaner
 import com.ai.assistance.operit.util.WaifuMessageProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "SpeechInteractionManager"
 
@@ -53,6 +57,16 @@ class SpeechInteractionManager(
     // 任务控制
     private var timeoutJob: Job? = null
     private var silenceTimeoutJob: Job? = null
+    private var startListeningJob: Job? = null
+    private var stopListeningJob: Job? = null
+    private var listeningEpoch = 0L
+    private val listenStart = DspListenStartController()
+
+    internal val bargeInGate = VoiceBargeInGate()
+    var onBargeInStopCommand: ((dropCurrentUtterance: Boolean) -> Unit)? = null
+
+    val isBargeInStopListen: Boolean
+        get() = bargeInGate.isBargeInStopListen
 
     // ===== 服务 =====
     val speechService = SpeechServiceFactory.getInstance(context)
@@ -76,6 +90,9 @@ class SpeechInteractionManager(
     }
 
     fun cleanup() {
+        cancelPendingStart()
+        onBargeInStopCommand = null
+        bargeInGate.reset()
         stopListening(isCancel = true)
         coroutineScope.launch {
             speechService.cancelRecognition()
@@ -83,6 +100,10 @@ class SpeechInteractionManager(
         }
         timeoutJob?.cancel()
         silenceTimeoutJob?.cancel()
+    }
+
+    fun dispose() {
+        cleanup()
     }
 
     private fun resetState() {
@@ -94,6 +115,44 @@ class SpeechInteractionManager(
         wakePhraseSnapshot = null
         timeoutJob?.cancel()
         silenceTimeoutJob?.cancel()
+        bargeInGate.reset()
+    }
+
+    private fun cancelPendingStart() {
+        listeningEpoch += 1
+        listenStart.cancelPending()
+        startListeningJob?.cancel()
+        startListeningJob = null
+    }
+
+    fun reset() {
+        cancelPendingStart()
+        resetState()
+        onStateChange(context.getString(R.string.floating_hold_microphone))
+    }
+
+    private fun clearPendingSpeechInput() {
+        silenceTimeoutJob?.cancel()
+        timeoutJob?.cancel()
+        userMessage = ""
+        accumulatedText = ""
+        latestPartialText = ""
+        isProcessingSpeech = false
+    }
+
+    fun enterBargeInStopListen() {
+        bargeInGate.enterBargeInStopListen()
+        if (BuildConfig.DEBUG) AppLogger.d(TAG, "barge mode=stop recording=$isRecording")
+        clearPendingSpeechInput()
+    }
+
+    fun resumeConversationListen(
+        dropCurrentUtterance: Boolean = false,
+        suppressDuplicateStop: Boolean = false,
+    ) {
+        bargeInGate.resumeConversationListen(dropCurrentUtterance, suppressDuplicateStop)
+        if (BuildConfig.DEBUG) AppLogger.d(TAG, "barge mode=conversation drop=${bargeInGate.dropUntilUtteranceEnd} recording=$isRecording")
+        clearPendingSpeechInput()
     }
 
     // ===== 焦点管理 =====
@@ -124,6 +183,15 @@ class SpeechInteractionManager(
             return
         }
 
+        // Keep the live AudioRecord. A second startRecognition() would fail and clear isRecording.
+        if (isRecording) {
+            return
+        }
+
+        listeningEpoch += 1
+        val startToken = listenStart.beginStart()
+        startListeningJob?.cancel()
+
         // 重置超时
         timeoutJob?.cancel()
         
@@ -136,8 +204,24 @@ class SpeechInteractionManager(
         onStateChange(context.getString(R.string.floating_listening))
 
         // 启动监听
-        coroutineScope.launch {
+        val previousStop = stopListeningJob
+        startListeningJob = coroutineScope.launch {
             try {
+                // Never let an older asynchronous stop cancel the newly opened recorder.
+                previousStop?.join()
+                if (!listenStart.stillPending(startToken)) return@launch
+                val dspReady = DspAndroidBridge.prepareCapture(context)
+                if (!listenStart.stillPending(startToken)) {
+                    return@launch
+                }
+                if (!dspReady) {
+                    isRecording = false
+                    isProcessingSpeech = false
+                    onStateChange(context.getString(R.string.floating_hold_microphone))
+                    onStartFailure?.invoke(context.getString(R.string.floating_start_recording_failed))
+                    return@launch
+                }
+
                 try {
                     AIForegroundService.ensureMicrophoneForeground(context, forceStart = true)
                 } catch (e: Exception) {
@@ -154,12 +238,21 @@ class SpeechInteractionManager(
 
                 // Give AIForegroundService a moment to stop wake listening and release microphone
                 delay(180)
+                if (!listenStart.stillPending(startToken)) {
+                    return@launch
+                }
 
                 var ok = false
                 var attempt = 0
                 while (!ok && attempt < 12) {
+                    if (!listenStart.stillPending(startToken)) {
+                        return@launch
+                    }
                     if (attempt > 0) {
                         delay(160)
+                        if (!listenStart.stillPending(startToken)) {
+                            return@launch
+                        }
                     }
                     ok = speechService.startRecognition(
                         languageCode = "zh-CN",
@@ -169,13 +262,21 @@ class SpeechInteractionManager(
                     attempt++
                 }
 
+                if (!listenStart.stillPending(startToken)) {
+                    return@launch
+                }
                 if (!ok) {
                     isRecording = false
                     isProcessingSpeech = false
                     onStateChange(context.getString(R.string.floating_hold_microphone))
                     onStartFailure?.invoke(context.getString(R.string.floating_start_recording_failed))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                if (!listenStart.stillPending(startToken)) {
+                    return@launch
+                }
                 isRecording = false
                 isProcessingSpeech = false
                 onStateChange(context.getString(R.string.floating_hold_microphone))
@@ -190,14 +291,19 @@ class SpeechInteractionManager(
     }
 
     fun stopListening(isCancel: Boolean) {
+        cancelPendingStart()
         if (!isRecording) return
         
         isRecording = false
         silenceTimeoutJob?.cancel()
 
-        coroutineScope.launch {
+        val stopEpoch = listeningEpoch
+        val previousStop = stopListeningJob
+        stopListeningJob = coroutineScope.launch {
+            previousStop?.join()
             if (isCancel) {
                 speechService.cancelRecognition()
+                if (stopEpoch != listeningEpoch) return@launch
                 isProcessingSpeech = false
                 resetState()
                 onStateChange(context.getString(R.string.floating_hold_microphone))
@@ -205,6 +311,7 @@ class SpeechInteractionManager(
                 isProcessingSpeech = true
                 onStateChange(context.getString(R.string.floating_recognizing))
                 speechService.stopRecognition()
+                if (stopEpoch != listeningEpoch) return@launch
                 startFallbackTimeout()
             }
         }
@@ -213,6 +320,26 @@ class SpeechInteractionManager(
     // 处理识别结果
     fun handleRecognitionResult(resultText: String, isFinal: Boolean, autoSendSilence: Boolean = false) {
         val effectiveText = stripWakePhrasePrefixIfNeeded(resultText)
+        val modeAtArrival = bargeInGate.consumeMode
+        val arrivalEpoch = bargeInGate.epoch
+        val decision = bargeInGate.onRecognition(effectiveText, isFinal, autoSendSilence, arrivalEpoch)
+
+        // Debug-only event metadata: do not put microphone transcripts in diagnostic logs.
+        if (BuildConfig.DEBUG && (isFinal || VoiceBargeInPolicy.matchesStopCommand(effectiveText))) {
+            AppLogger.d(TAG, "barge result mode=$modeAtArrival final=$isFinal len=${effectiveText.length} stopMatch=${VoiceBargeInPolicy.matchesStopCommand(effectiveText)} interrupt=${decision.interruptAiTurn} ignored=${decision.ignoredAsLateOrResidue} recording=$isRecording")
+        }
+
+        if (decision.interruptAiTurn) {
+            clearPendingSpeechInput()
+            onBargeInStopCommand?.invoke(decision.dropCurrentUtteranceAfterInterrupt)
+            return
+        }
+
+        if (decision.ignoredAsLateOrResidue || !decision.sendToConversation) {
+            silenceTimeoutJob?.cancel()
+            return
+        }
+
         if (isRecording) {
             if (effectiveText.isNotBlank()) {
                 // 处理增量
@@ -221,8 +348,8 @@ class SpeechInteractionManager(
                 }
                 latestPartialText = effectiveText
 
-                // 静默检测
-                if (autoSendSilence) {
+                // 静默检测：AI/TTS 插话监听绝不能走这条 2s 自动发送
+                if (decision.enableAutoSendSilence) {
                     silenceTimeoutJob?.cancel()
                     silenceTimeoutJob = coroutineScope.launch {
                         delay(2000)
@@ -286,6 +413,12 @@ class SpeechInteractionManager(
     }
 
     private fun finalizeSpeechInput() {
+        if (bargeInGate.isBargeInStopListen || bargeInGate.dropUntilUtteranceEnd) {
+            clearPendingSpeechInput()
+            isProcessingSpeech = false
+            return
+        }
+
         isProcessingSpeech = false
         val text = userMessage.ifBlank { accumulatedText }
         

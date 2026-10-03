@@ -3,6 +3,8 @@ package com.ai.assistance.operit.core.tools
 import android.content.Context
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.chat.enhance.ToolExecutionManager
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
+import com.ai.assistance.operit.core.commonbase.registerCommonBaseTools
 import com.ai.assistance.operit.core.tools.climode.CliToolModeSupport
 import com.ai.assistance.operit.core.tools.climode.ToolExposureMode
 import com.ai.assistance.operit.core.tools.defaultTool.ToolGetter
@@ -34,7 +36,16 @@ import org.json.JSONObject
  * @param context Application context for tools that need it
  */
 fun registerAllTools(handler: AIToolHandler, context: Context) {
+    if (CommonBaseProfile.isEnabled) {
+        registerCommonBaseTools(handler, context)
+        return
+    }
+    // Original-profile bodies stay in a separate method so commonRelease startup
+    // never verifies FFmpegKit/OCRUtils-referencing bytecode in this function.
+    registerOriginalProfileTools(handler, context)
+}
 
+private fun registerOriginalProfileTools(handler: AIToolHandler, context: Context) {
     // Helper function to wrap UI tool execution with visibility changes
     suspend fun executeUiToolWithVisibility(
         tool: AITool,
@@ -2697,6 +2708,15 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             }
     )
 
+    if (CommonBaseProfile.storeNativeTrim) {
+        return
+    }
+    registerFFmpegTools(handler, context)
+}
+
+private fun registerFFmpegTools(handler: AIToolHandler, context: Context) {
+    fun s(resId: Int, vararg args: Any): String = context.getString(resId, *args)
+
     // FFmpeg工具 - 执行通用FFmpeg命令
     handler.registerTool(
             name = "ffmpeg_execute",
@@ -2706,6 +2726,12 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             },
             executor = { tool ->
                 val ffmpegTool = ToolGetter.getFFmpegToolExecutor(context)
+                        ?: return@registerTool ToolResult(
+                                toolName = tool.name,
+                                success = false,
+                                result = StringResultData(""),
+                                error = "FFmpeg tools are not available in the store profile."
+                        )
                 ffmpegTool.invoke(tool)
             }
     )
@@ -2716,6 +2742,12 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { _ -> s(R.string.toolreg_ffmpeg_info_desc) },
             executor = { tool ->
                 val ffmpegInfoTool = ToolGetter.getFFmpegInfoToolExecutor()
+                        ?: return@registerTool ToolResult(
+                                toolName = tool.name,
+                                success = false,
+                                result = StringResultData(""),
+                                error = "FFmpeg tools are not available in the store profile."
+                        )
                 ffmpegInfoTool.invoke(tool)
             }
     )
@@ -2730,6 +2762,12 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             },
             executor = { tool ->
                 val ffmpegConvertTool = ToolGetter.getFFmpegConvertToolExecutor(context)
+                        ?: return@registerTool ToolResult(
+                                toolName = tool.name,
+                                success = false,
+                                result = StringResultData(""),
+                                error = "FFmpeg tools are not available in the store profile."
+                        )
                 ffmpegConvertTool.invoke(tool)
             }
     )

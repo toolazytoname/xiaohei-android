@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.core.avatar.common.control.AvatarSettingKeys
 import com.ai.assistance.operit.core.avatar.common.state.AvatarEmotion
 import com.ai.assistance.operit.core.avatar.common.view.AvatarView
@@ -324,7 +325,9 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     // 监听是否需要自动勾选"圈选识别" (来自圈选识别返回)
     LaunchedEffect(floatContext.currentMode, floatContext.pendingScreenSelection) {
         if (floatContext.currentMode == FloatingMode.FULLSCREEN && floatContext.pendingScreenSelection) {
-            viewModel.hasOcrSelection = true
+            if (CommonBaseUiResiduePolicy.allowsScreenOcr()) {
+                viewModel.hasOcrSelection = true
+            }
             floatContext.pendingScreenSelection = false
         }
     }
@@ -616,13 +619,25 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
             userMessage = viewModel.inputText,
             onUserMessageChange = { viewModel.inputText = it },
             attachScreenContent = viewModel.attachScreenContent,
-            onAttachScreenContentChange = { viewModel.attachScreenContent = it },
+            onAttachScreenContentChange = { requested ->
+                viewModel.attachScreenContent =
+                    requested && CommonBaseUiResiduePolicy.allowsScreenContentAttach()
+            },
             attachNotifications = viewModel.attachNotifications,
-            onAttachNotificationsChange = { viewModel.attachNotifications = it },
+            onAttachNotificationsChange = { requested ->
+                viewModel.attachNotifications =
+                    requested && CommonBaseUiResiduePolicy.allowsNotificationAttach()
+            },
             attachLocation = viewModel.attachLocation,
-            onAttachLocationChange = { viewModel.attachLocation = it },
+            onAttachLocationChange = { requested ->
+                viewModel.attachLocation =
+                    requested && CommonBaseUiResiduePolicy.allowsLocationAttach()
+            },
             hasOcrSelection = viewModel.hasOcrSelection,
-            onHasOcrSelectionChange = { viewModel.hasOcrSelection = it },
+            onHasOcrSelectionChange = { requested ->
+                viewModel.hasOcrSelection =
+                    requested && CommonBaseUiResiduePolicy.allowsScreenOcr()
+            },
             isTtsMuted = viewModel.isStreamingTtsMuted,
             onToggleTtsMute = { viewModel.toggleStreamingTtsMuted() },
             onSendClick = { viewModel.sendInputMessage() },

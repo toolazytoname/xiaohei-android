@@ -1,3 +1,4 @@
+import com.android.build.api.artifact.SingleArtifact
 import java.io.File
 import java.io.FileInputStream
 import java.net.HttpURLConnection
@@ -7,7 +8,18 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.Properties
 import java.util.zip.ZipFile
+import javax.inject.Inject
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.provider.SetProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.TaskAction
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -20,6 +32,19 @@ plugins {
     id("io.objectbox")
     id("kotlin-kapt")
 }
+
+// Must match CommonBaseAssetPolicy.excludedPackagedRelativePaths. Applied only to the
+// common and commonRelease buildTypes via SingleArtifact.ASSETS transform
+// (merged assets, including :terminal).
+val commonBaseExcludedPackagedAssets =
+    linkedSetOf(
+        "accessibility.apk",
+        "desktop.apk",
+        "shizuku.apk",
+        "subpack/android.apk",
+        "subpack/windows.zip",
+        "ubuntu-noble-aarch64-pd-v4.18.0.tar.xz",
+    )
 
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
@@ -384,6 +409,15 @@ android {
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
             }
+            create("commonStore") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+            }
         }
     }
 
@@ -394,9 +428,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ai.assistance.operit"
+        // Own reverse-domain identity (xiaohei.weichao.studio). Intent action
+        // strings that still carry the upstream prefix stay valid: they are
+        // constants matched between sender/receiver, not the package identity.
+        applicationId = "studio.weichao.xiaohei"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 46
         versionName = "1.12.1"
 
@@ -415,9 +452,18 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags("-std=c++17")
+                // Pin the revisions used by the voice lifecycle and real-device diagnostics.
+                // Explicit arguments also replace an existing CMake cache's old "master" refs.
+                arguments(
+                    "-DOPERIT_SHERPA_NCNN_GIT_REF=c61e50d61e9fbed5972afa4d95bc560e168affe2",
+                    "-DOPERIT_NCNN_GIT_REF=713bd01928b350150ad5594218512b8669588fef"
+                )
             }
         }
 
+        buildConfigField("boolean", "COMMON_BASE", "false")
+        buildConfigField("boolean", "COMMON_STORE", "false")
+        buildConfigField("boolean", "COMMON_ENHANCED", "false")
     }
 
     buildTypes {
@@ -448,6 +494,40 @@ android {
             matchingFallbacks += listOf("debug")
             resValue("string", "app_name", "Operit Clone")
         }
+        create("common") {
+            initWith(getByName("debug"))
+            // Enhanced side-load variant keeps its own id so it can co-exist
+            // with the store build (studio.weichao.xiaohei) on one device.
+            applicationIdSuffix = ".common"
+            matchingFallbacks += listOf("debug")
+            buildConfigField("boolean", "COMMON_BASE", "true")
+            buildConfigField("boolean", "COMMON_ENHANCED", "true")
+            manifestPlaceholders["xiaoheiDspPermission"] = "io.github.toolazytoname.xiaohei.permission.WAKEWORD_EVENT"
+            manifestPlaceholders["xiaoheiDspCompanionPackage"] = "io.github.toolazytoname.xiaohei.dsp"
+            manifestPlaceholders["xiaoheiCleartextAllowed"] = "true"
+            resValue("string", "app_name", "小黑")
+            // Large unused assets are dropped after merge by the common-base
+            // SingleArtifact.ASSETS transform. Do not exclude them from sourceSets.main
+            // or generatedMainAssetsDir (those inputs are shared with other buildTypes).
+        }
+        create("commonRelease") {
+            initWith(getByName("release"))
+            // Store identity is exactly the reverse-domain id, no suffix.
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+            buildConfigField("boolean", "COMMON_BASE", "true")
+            buildConfigField("boolean", "COMMON_STORE", "true")
+            // Store identity cannot own the enhanced companion signature permission.
+            manifestPlaceholders["xiaoheiDspPermission"] = "studio.weichao.xiaohei.permission.DSP_DISABLED"
+            manifestPlaceholders["xiaoheiDspCompanionPackage"] = "studio.weichao.xiaohei"
+            manifestPlaceholders["xiaoheiCleartextAllowed"] = "false"
+            buildConfigField("boolean", "COMMON_ENHANCED", "false")
+            resValue("string", "app_name", "小黑")
+            // Same keystore as release, but v2+v3 only. Do not use APK rotation signing.
+            // If that config is absent, leave unsigned. Never assign debug signing.
+            signingConfig = signingConfigs.findByName("commonStore")
+            // Same six-asset trim as common, wired below via SingleArtifact.ASSETS.
+        }
         create("nightly") {
             isMinifyEnabled = false
             isShrinkResources = false
@@ -474,6 +554,35 @@ android {
                 val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
                 output.outputFileName = "app-clone.apk"
             }
+        }
+        if (buildType.name == "common") {
+            outputs.all {
+                val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+                output.outputFileName = "app-common.apk"
+            }
+        }
+        if (buildType.name == "commonRelease") {
+            outputs.all {
+                val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+                output.outputFileName = "app-common-release.apk"
+            }
+        }
+    }
+    sourceSets {
+        getByName("commonRelease") {
+            // Share the common-base overlay tree with the debug common buildType.
+            // Another worker owns src/common Manifest / backup XML contents.
+            manifest.srcFile("src/common/AndroidManifest.xml")
+            java.srcDir("src/common/java")
+            kotlin.srcDir("src/common/java")
+            kotlin.srcDir("src/common/kotlin")
+            res.srcDir("src/common/res")
+            assets.srcDir("src/common/assets")
+            resources.srcDir("src/common/resources")
+            aidl.srcDir("src/common/aidl")
+            renderscript.srcDir("src/common/rs")
+            jniLibs.srcDir("src/common/jniLibs")
+            shaders.srcDir("src/common/shaders")
         }
     }
     compileOptions {
@@ -526,6 +635,90 @@ android {
 //    }
 }
 
+abstract class FilterCommonPackagedAssetsTask : DefaultTask() {
+    @get:Inject
+    abstract val fileSystemOperations: FileSystemOperations
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val inputDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:Input
+    abstract val excludedRelativePaths: SetProperty<String>
+
+    @TaskAction
+    fun filterAssets() {
+        val excluded = excludedRelativePaths.get()
+        excluded.forEach { relative ->
+            require(!relative.startsWith("/") && !relative.contains("..") && !relative.contains('\\')) {
+                "Invalid common-base excluded asset path: $relative"
+            }
+        }
+        fileSystemOperations.sync {
+            from(inputDir)
+            into(outputDir)
+            exclude { element ->
+                val relative = element.relativePath.pathString.replace(File.separatorChar, '/')
+                relative in excluded
+            }
+        }
+    }
+}
+
+androidComponents {
+    listOf("common", "commonRelease").forEach { buildTypeName ->
+        onVariants(selector().withBuildType(buildTypeName)) { variant ->
+            val capitalizedName =
+                variant.name.replaceFirstChar { ch ->
+                    if (ch.isLowerCase()) ch.titlecase() else ch.toString()
+                }
+            val filterTask =
+                tasks.register<FilterCommonPackagedAssetsTask>("filter${capitalizedName}PackagedAssets") {
+                    description =
+                        "Removes common-base unreachable assets from merged packaging for this variant only."
+                    group = "build"
+                    excludedRelativePaths.set(commonBaseExcludedPackagedAssets)
+                }
+            variant.artifacts
+                .use(filterTask)
+                .wiredWithDirectories(
+                    FilterCommonPackagedAssetsTask::inputDir,
+                    FilterCommonPackagedAssetsTask::outputDir,
+                )
+                .toTransform(SingleArtifact.ASSETS)
+        }
+    }
+    onVariants(selector().withBuildType("commonRelease")) { variant ->
+        listOf(
+            "lib/arm64-v8a/libavcodec.so",
+            "lib/arm64-v8a/libavdevice.so",
+            "lib/arm64-v8a/libavfilter.so",
+            "lib/arm64-v8a/libavformat.so",
+            "lib/arm64-v8a/libavutil.so",
+            "lib/arm64-v8a/libffmpegkit.so",
+            "lib/arm64-v8a/libffmpegkit_abidetect.so",
+            "lib/arm64-v8a/libswresample.so",
+            "lib/arm64-v8a/libswscale.so",
+            "lib/arm64-v8a/libc++_shared.so",
+            "lib/arm64-v8a/libmediapipe_tasks_text_jni.so",
+            "lib/arm64-v8a/libmlkit_google_ocr_pipeline.so",
+            // Unused terminal script disguised as a shared library is not a store capability.
+            "lib/arm64-v8a/libsudo.so",
+            // Common store has no filesystem/grep tool or TensorFlow consumer.
+            "lib/arm64-v8a/liboperit_ripgrep.so",
+            "lib/arm64-v8a/libtensorflowlite_jni.so",
+            // Store STT is sherpa-ncnn. sherpa-mnn JNI is unreachable (factory
+            // has no SHERPA_MNN; prefs remap it to NCNN) and is not packaged.
+            "lib/arm64-v8a/libsherpa-mnn-jni.so",
+        ).forEach { path ->
+            variant.packaging.jniLibs.excludes.add(path)
+        }
+    }
+}
+
 val signRotatedReleaseApk by tasks.registering {
     description = "Signs the Release APK with the legacy V2 signer and rotated V3 signer."
     group = "distribution"
@@ -554,6 +747,8 @@ val signRotatedNightlyApk by tasks.registering {
     }
 }
 
+// Exact names only. Do not broaden to assembleCommonRelease; that variant must
+// not run Operit nightly/release APK rotation signing.
 tasks.matching { it.name == "assembleRelease" }.configureEach {
     finalizedBy(signRotatedReleaseApk)
 }
@@ -569,6 +764,17 @@ tasks.named("preBuild") {
 
 tasks.matching { it.name.matches(Regex("merge.*Assets")) }.configureEach {
     dependsOn(syncMainAssets)
+}
+
+configurations.all {
+    exclude(group = "pl.droidsonroids.gif", module = "android-gif-drawable")
+    // All Compose variants converge on graphics-path transitively; the local AAR
+    // below is the single arm64 implementation used by the app.
+    exclude(group = "androidx.graphics", module = "graphics-path")
+    // Local RELRO-rebuilt Filament AARs replace the Maven modules globally,
+    // including transitive pulls from gltfio.
+    exclude(group = "com.google.android.filament", module = "filament-android")
+    exclude(group = "com.google.android.filament", module = "filament-utils-android")
 }
 
 kotlin {
@@ -588,11 +794,19 @@ dependencies {
     implementation(project(":showerclient"))
     implementation(project(":quickjs"))
 
-    // glTF runtime rendering (Filament)
-    implementation("com.google.android.filament:filament-android:1.69.2")
+    // glTF runtime rendering (Filament 1.69.2). The two JNI AARs are source
+    // rebuilt with 16KB LOAD/RELRO alignment; gltfio's official arm64 JNI
+    // already passes the same static gate and remains Maven-resolved.
+    implementation(files("libs/filament-android-1.69.2-arm64-relro.aar"))
     implementation("com.google.android.filament:gltfio-android:1.69.2")
-    implementation("com.google.android.filament:filament-utils-android:1.69.2")
-    implementation(libs.androidx.ui.graphics.android)
+    implementation(files("libs/filament-utils-android-1.69.2-arm64-relro.aar"))
+    // graphics-path 1.0.1 is transitive from ui-graphics-android.
+    // Replace only its arm64 native member with the source-rebuilt 16KB RELRO AAR;
+    // store/enhanced packaging is arm64-only, while classes/resources remain byte-identical.
+    implementation(libs.androidx.ui.graphics.android) {
+        exclude(group = "androidx.graphics", module = "graphics-path")
+    }
+    implementation(files("libs/graphics-path-1.0.1-16kb-arm64.aar"))
     // The only vendored artifact is the custom FFmpegKit AAR.
     implementation(files("libs/ffmpeg-kit-local.aar"))
     implementation("com.arthenica:smart-exception-common:0.2.1")
@@ -643,8 +857,8 @@ dependencies {
     // Add missing SVG support
     implementation(libs.androidsvg)
     
-    // Add missing GIF support for Markwon
-    implementation(libs.android.gif)
+    // 16KB-aligned android-gif-drawable 1.2.28 (arm64 so rebuilt; rest of AAR unchanged)
+    implementation(files("libs/android-gif-drawable-1.2.28-16kb.aar"))
     
     // Image Cropper for background image cropping
     implementation(libs.image.cropper)
@@ -673,7 +887,6 @@ dependencies {
     
     // LaTeX rendering libraries
     implementation(libs.jlatexmath)
-    implementation(libs.renderx) // RenderX library for LaTeX rendering
     
     // Base Android dependencies
     implementation(libs.androidx.core.ktx)
@@ -705,8 +918,10 @@ dependencies {
     implementation(libs.tensorflow.lite)
     implementation(libs.mediapipe.tasks.text)
     
-    // ONNX Runtime for Android - 支持更强大的多语言Embedding模型
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
+    // ONNX Runtime 1.29.0 is rebuilt locally for arm64-v8a with 16KB LOAD/RELRO
+    // alignment. The app only uses CPU VAD/VITS paths; NNAPI/XNNPACK/WebGPU
+    // provider entry points are not used by this product build.
+    implementation(files("libs/onnxruntime-android-1.29.0-arm64-cpu-16kb.aar"))
 
     // Room 数据库
     implementation(libs.room.runtime)
