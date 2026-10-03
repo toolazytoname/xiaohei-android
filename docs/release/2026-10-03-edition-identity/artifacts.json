@@ -1,0 +1,58 @@
+{
+  "source_commit": "935996e4e61c5a4d4915d6db14ca496e2d7f12c0",
+  "store": {
+    "name": "小黑",
+    "package": "studio.weichao.xiaohei",
+    "apk_sha256": "e099790a27a507870503197d72ec073510e17c2d08d8fbbe36212344328082e7",
+    "aab_sha256": "739a854cc20d959383bfc6a893d61ca7c53b02373064c76b8517a0c4d3c7f859"
+  },
+  "enhanced": {
+    "name": "小黑·增强",
+    "package": "studio.weichao.xiaohei.common",
+    "apk_sha256": "3dc6ce0a0715cd24e19af3f63c6670e6c0dbb022277c746be114384c013cd914"
+  },
+  "release_state": "internal_candidates_only_not_store_ready",
+  "static_checks": {
+    "store": {
+      "package": true,
+      "label": true,
+      "backup_disabled": true,
+      "arm64_only": true,
+      "stt_notices_present": true,
+      "signature_verified": true,
+      "zip_alignment": true,
+      "native_dependency_closure": true,
+      "non_debuggable": true,
+      "manifest_cleartext_disabled": true,
+      "target_at_least_36": true,
+      "native_16kb_relro_guide_alignment": true,
+      "native_16kb_load": true,
+      "no_non_elf_libraries": true,
+      "native_16kb_relro_protection": true,
+      "excluded_libs_absent": true,
+      "forbidden_permissions_absent": true,
+      "signature_v2": true,
+      "signature_v3": true,
+      "apk_aab_native_identical": true,
+      "apk_aab_stt_notices_identical": true,
+      "aab_excluded_libs_absent": true
+    },
+    "enhanced": {
+      "package": true,
+      "label": true,
+      "backup_disabled": true,
+      "arm64_only": true,
+      "stt_notices_present": true,
+      "signature_verified": true,
+      "zip_alignment": true,
+      "native_dependency_closure": true
+    }
+  },
+  "not_claimed": [
+    "enhanced 16KB compliance",
+    "voice/barge-in/DSP/lockscreen/reboot runtime acceptance",
+    "Android15/16 and 16KB runtime acceptance",
+    "clean-environment reproducibility or all licence obligations",
+    "public APK distribution or store submission"
+  ]
+}

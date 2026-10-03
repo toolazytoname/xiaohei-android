@@ -1,0 +1,39 @@
+{
+  "recorded_at": "2026-10-03T05:14:49.192313+00:00",
+  "device": "KB2000",
+  "android": 14,
+  "page_size": 4096,
+  "source_commit": "935996e",
+  "profiles": {
+    "store": {
+      "reply": "FINAL_STORE_OK",
+      "model": "glm-5.3-flash",
+      "default_brand_visible": true,
+      "upstream_update_guard_observed": true,
+      "synthetic_chat_deleted_and_restart_checked": true,
+      "microphone_appops": "Uid mode: RECORD_AUDIO: ignore",
+      "force_stopped": true
+    },
+    "enhanced": {
+      "reply": "FINAL_ENHANCED_OK",
+      "model": "glm-5.3-flash",
+      "default_brand_visible": true,
+      "upstream_update_guard_observed": true,
+      "synthetic_chat_deleted_and_restart_checked": true,
+      "microphone_appops": "Uid mode: RECORD_AUDIO: ignore",
+      "force_stopped": true
+    }
+  },
+  "not_tested": [
+    "acoustic TTS",
+    "voice controls during playback",
+    "barge-in",
+    "DSP",
+    "lockscreen",
+    "reboot",
+    "Android15/16",
+    "16KB runtime",
+    "database schema upgrade"
+  ],
+  "cleanup_note": "Repeated auto-generated titles made the generic runner reject ambiguity. Opened the first matching row and verified FINAL_STORE_OK before deleting only that new row; old same-named chat retained. Awaited deletion and verified after process restart. Enhanced history content-desc truncates long names; used the unique full title text and its observed row, confirmed the exact title before deleting."
+}

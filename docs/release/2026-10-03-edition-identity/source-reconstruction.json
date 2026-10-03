@@ -1,0 +1,11 @@
+{
+  "recorded_at": "2026-10-03T05:01:38.242786+00:00",
+  "commit": "935996e4e61c5a4d4915d6db14ca496e2d7f12c0",
+  "patch_sha256": "691bebc71850ff770b7112d2d5faf70ee69c9d871386ed7398086920dfe93ccd",
+  "tracked_files_checked": 3016,
+  "mismatches": [],
+  "pass": true,
+  "terminal_patch_applied": true,
+  "scratch_removed_on_exit": true,
+  "scope": "Pinned archives + current binary patch + terminal patch reconstruct tracked source/assets. Does NOT verify ignored AAR/model source completeness or clean compilation."
+}

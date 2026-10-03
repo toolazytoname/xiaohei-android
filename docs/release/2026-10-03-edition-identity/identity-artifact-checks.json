@@ -1,0 +1,22 @@
+[
+  {
+    "profile": "store",
+    "apk_sha256": "e099790a27a507870503197d72ec073510e17c2d08d8fbbe36212344328082e7",
+    "application_label": "小黑",
+    "launcher_label": "小黑",
+    "resolved_foreground_resources": [
+      "ic_launcher_xiaohei_foreground"
+    ],
+    "pass": true
+  },
+  {
+    "profile": "enhanced",
+    "apk_sha256": "3dc6ce0a0715cd24e19af3f63c6670e6c0dbb022277c746be114384c013cd914",
+    "application_label": "小黑·增强",
+    "launcher_label": "小黑·增强",
+    "resolved_foreground_resources": [
+      "ic_launcher_xiaohei_enhanced_foreground"
+    ],
+    "pass": true
+  }
+]

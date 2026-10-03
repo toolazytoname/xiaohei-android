@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-10-03T05:11:23.197456+00:00",
+  "source_commit": "935996e4e61c5a4d4915d6db14ca496e2d7f12c0",
+  "variants": {
+    "Common": {
+      "tests": 525,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "CommonRelease": {
+      "tests": 525,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "scope": "Same suite runs in each variant, not independent end-to-end scenarios."
+}
