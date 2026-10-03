@@ -1,0 +1,69 @@
+{
+  "status": "public_prerelease_available",
+  "version": "1.0.0-preview.1(47)",
+  "released_at": "2026-10-03T14:39:29Z",
+  "download_page": "https://xiaohei.weichao.studio/android",
+  "release_url": "https://github.com/toolazytoname/xiaohei-android/releases/tag/android-1.0.0-preview.1",
+  "build_commit": "f0ce96a",
+  "android_tooling_commit": "0c8a552",
+  "website_commit": "7ad8a0c",
+  "unit_tests": {
+    "testCommonReleaseUnitTest": {
+      "tests": 551,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "testCommonEnhancedReleaseUnitTest": {
+      "tests": 551,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "static_gates_passed": true,
+  "artifact_sha256": {
+    "store": "a65d8c8868f18f744b0e430bf8ffaffc975479fbb830ef8f06a3b17978b3d389",
+    "enhanced": "dee66966e2d86f2a04ab983a720b10befbee51c025074caef9df1a85c481c0e5"
+  },
+  "source_archive_sha256": "42f34c87fc0e99b1803a64d28cce8c1dd6158d3ddd565be78d5b29536a10df0a",
+  "remote_assets": {
+    "count": 5,
+    "uploaded_digests_match": true,
+    "all_http_200": true
+  },
+  "production_manifest_matches": true,
+  "browser": {
+    "390px": {
+      "horizontal_overflow": false,
+      "broken_images": 0
+    },
+    "1366px": {
+      "horizontal_overflow": false,
+      "broken_images": 0
+    }
+  },
+  "device": {
+    "device": "OnePlus8T KB2000 Android14",
+    "candidate": "commonRelease 1.0.0-preview.1(47)",
+    "same_signer_verified": true,
+    "install_replace": "success",
+    "launch_command": "accepted",
+    "foreground_ui": "not_verified_device_locked",
+    "microphone": "not_started",
+    "stop": "force-stopped ordinary package",
+    "enhanced": "not_installed; old debug package/data untouched",
+    "scope": "Installation only, not current-package conversation/UI/voice acceptance"
+  },
+  "not_claimed": [
+    "current preview dialogue/UI acceptance",
+    "new signed enhanced device test",
+    "voice/natural interruption/DSP",
+    "16KB device runtime",
+    "clean environment rebuild",
+    "complete transitive license audit",
+    "store approval"
+  ],
+  "ios": "unchanged; already submitted for manual release",
+  "harmony_native": "not_available"
+}
