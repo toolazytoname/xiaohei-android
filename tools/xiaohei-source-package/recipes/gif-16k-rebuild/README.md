@@ -1,6 +1,6 @@
 # android-gif-drawable 1.2.28 arm64 16KB rebuild
 
-Rebuilds **only** `libpl_droidsonroids_gif.so` from official `v1.2.28` C sources. Does not change Operit/common-base, does not run Gradle, does not install into an APK, and does not claim whole-app 16KB compatibility.
+Rebuilds `libpl_droidsonroids_gif.so` and wraps the official AAR, replacing arm64 native code while retaining the Java/resources and dropping unused JNI ABIs from official `v1.2.28` C sources. Does not change Operit/common-base, does not run Gradle, does not install into an APK, and does not claim whole-app 16KB compatibility.
 
 ## Provenance
 
@@ -19,7 +19,7 @@ Version is **not** upgraded. 1.2.29 Maven prebuilt already had 16KB LOAD but REL
 ## Rebuild
 
 ```bash
-./build.sh
+ANDROID_SDK_ROOT=/path/to/sdk GIF_AAR=/path/to/official-1.2.28.aar ./build.sh
 ```
 
 Uses unmodified upstream `android-gif-drawable/src/main/c/CMakeLists.txt` (`file(GLOB_RECURSE *.c)`). Extra flags only:

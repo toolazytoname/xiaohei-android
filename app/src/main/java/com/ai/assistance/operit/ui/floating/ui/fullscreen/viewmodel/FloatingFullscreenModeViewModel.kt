@@ -93,6 +93,9 @@ class FloatingFullscreenModeViewModel(
      private var activeAiStreamIdentity: Int? = null
      private var activeAiMessageTimestamp: Long? = null
      private var ttsSpeakJob: Job? = null
+     private var interruptResumeJob: Job? = null
+     private var voiceSession = VoiceSessionEpoch()
+     private var captureSession: Long? = null
 
     private val wakePrefs by lazy { WakeWordPreferences(context.applicationContext) }
     private var inactivityTimeoutSeconds: Int = WakeWordPreferences.DEFAULT_VOICE_CALL_INACTIVITY_TIMEOUT_SECONDS
@@ -117,14 +120,22 @@ class FloatingFullscreenModeViewModel(
         onSpeechResult = { text, _ -> 
             // 收到最终语音结果后直接发送，不再写入底部输入框
             val finalText = text.trim()
-            if (finalText.isNotEmpty()) {
+            val sessionAtResult = captureSession
+            if (finalText.isNotEmpty() && sessionAtResult != null) {
                 aiMessage = context.getString(R.string.floating_thinking)
                 coroutineScope.launch {
+                    // 结束语音后仍投递会重新开一轮回答，并让 await 把麦拉起来。
+                    if (!voiceSession.isCurrentSession(sessionAtResult) || captureSession != sessionAtResult) {
+                        return@launch
+                    }
                     startVoiceAvatarThinking()
                     prepareVoiceCaptureForAiTurn()
                     try {
                         maybeAutoAttachByKeyword(finalText)
                     } catch (_: Exception) {
+                    }
+                    if (!voiceSession.isCurrentSession(sessionAtResult) || captureSession != sessionAtResult) {
+                        return@launch
                     }
                     floatContext.onSendMessage?.invoke(finalText, PromptFunctionType.VOICE)
                     awaitAiTurnAndResumeVoiceCapture()
@@ -197,11 +208,15 @@ class FloatingFullscreenModeViewModel(
             stopVoiceCapture(true)
         }
         if (plan.startCaptureWithoutCancelingAi) {
-            startVoiceCaptureKeepingAiTurn()
+            startWaveCaptureKeepingAiTurn(voiceSession.session)
         }
     }
 
-    private fun startVoiceCaptureKeepingAiTurn() {
+    private fun startWaveCaptureKeepingAiTurn(jobSession: Long) {
+        if (!voiceSession.allowsCaptureStart(jobSession)) {
+            return
+        }
+        captureSession = voiceSession.session
         speechManager.startListening { errorMsg ->
             aiMessage = errorMsg
         }
@@ -211,6 +226,10 @@ class FloatingFullscreenModeViewModel(
         dropCurrentUtterance: Boolean = false,
         suppressDuplicateStop: Boolean = false,
     ) {
+        val sessionAtInterrupt = voiceSession.session
+        val streamId = activeAiStreamIdentity
+        // 停止回答：session 不变，listen 可恢复；抬 speech 代，避免已排队 TTS 在 stop 之后再 speak。
+        voiceSession = voiceSession.stopAnswering(streamId)
         val plan =
             VoiceWaveCapturePlanner.interrupt(
                 shouldResumeAfterAiTurn = shouldResumeVoiceCaptureAfterAiTurn,
@@ -240,27 +259,36 @@ class FloatingFullscreenModeViewModel(
         if (plan.cancelAiTurn) {
             floatContext.onCancelMessage?.invoke()
         }
-        coroutineScope.launch {
+        interruptResumeJob?.cancel()
+        interruptResumeJob = coroutineScope.launch {
             try {
                 speechManager.voiceService.stop()
             } catch (_: Exception) {
             }
+            // 未跟踪的 launch 若在 end 之后才跑到 startVoiceCapture，会把已结束的麦重新打开。
             if (plan.startCaptureIfIdle &&
+                voiceSession.allowsCaptureStart(sessionAtInterrupt) &&
                 !speechManager.isRecording &&
                 !speechManager.isProcessingSpeech
             ) {
-                startVoiceCapture()
+                startWaveCaptureIfCurrent(sessionAtInterrupt)
             }
         }
     }
 
     private fun awaitAiTurnAndResumeVoiceCapture() {
         if (!isWaveActive || !shouldResumeVoiceCaptureAfterAiTurn) return
+        val sessionAtWait = voiceSession.session
         resumeVoiceCaptureJob?.cancel()
         resumeVoiceCaptureJob = coroutineScope.launch {
             delay(120)
             var observedAiBusy = false
-            while (isActive && isWaveActive && shouldResumeVoiceCaptureAfterAiTurn) {
+            while (
+                isActive &&
+                isWaveActive &&
+                shouldResumeVoiceCaptureAfterAiTurn &&
+                voiceSession.isCurrentSession(sessionAtWait)
+            ) {
                 val busy = isAiBusyOrSpeaking()
                 if (busy) {
                     observedAiBusy = true
@@ -288,10 +316,11 @@ class FloatingFullscreenModeViewModel(
                     // AI 这一轮结束后，总是从此刻重新开始计算空闲超时。
                     lastVoiceActivityAtMs = System.currentTimeMillis()
                     if (plan.startCaptureIfIdle &&
+                        voiceSession.allowsCaptureStart(sessionAtWait) &&
                         !speechManager.isRecording &&
                         !speechManager.isProcessingSpeech
                     ) {
-                        startVoiceCapture()
+                        startWaveCaptureIfCurrent(sessionAtWait)
                     }
                     return@launch
                 }
@@ -305,6 +334,8 @@ class FloatingFullscreenModeViewModel(
         isVoiceCapturePausedForAi = false
         resumeVoiceCaptureJob?.cancel()
         resumeVoiceCaptureJob = null
+        interruptResumeJob?.cancel()
+        interruptResumeJob = null
     }
 
     fun processAndSpeakAiMessage(lastMessage: ChatMessage?, ttsCleanerRegexs: List<String>) {
@@ -325,7 +356,16 @@ class FloatingFullscreenModeViewModel(
             return
         }
         
+        // A replay/recomposition of the same stream must not invalidate its live TTS
+        // generation, nor restart a completed collector from its replay buffer.
+        val incomingStream = message.contentStream
+        if (message.sender == "ai" && incomingStream != null) {
+            val identity = System.identityHashCode(incomingStream)
+            if (!voiceSession.allowsStreamCollect(identity) || activeAiStreamIdentity == identity) return
+        }
         stopCurrentTtsPlayback()
+        // 新消息抬 speech 代：旧 join 链在 stop 之后仍会 speak，不能只 cancel 最新 job。
+        voiceSession = voiceSession.invalidateSpeech()
         
         when (message.sender) {
             "think" -> {
@@ -338,6 +378,10 @@ class FloatingFullscreenModeViewModel(
                 val stream = message.contentStream
                 if (stream != null) {
                     val streamIdentity = System.identityHashCode(stream)
+                    // 结束/停止已丢弃的同一条流若再被 compose 拉起来，会重新排队 TTS。
+                    if (!voiceSession.allowsStreamCollect(streamIdentity)) {
+                        return
+                    }
                     if (aiStreamJob?.isActive == true && activeAiStreamIdentity == streamIdentity) {
                         return
                     }
@@ -346,8 +390,9 @@ class FloatingFullscreenModeViewModel(
                     activeAiStreamIdentity = streamIdentity
 
                     // 不要立即清空，等待流内容到达
+                    val speechAtStart = voiceSession.speech
                     aiStreamJob = coroutineScope.launch {
-                        handleStreamResponse(stream, ttsCleanerRegexs)
+                        handleStreamResponse(stream, cleaners = ttsCleanerRegexs, speechGeneration = speechAtStart)
                     }
                 } else {
                     aiStreamJob?.cancel()
@@ -359,7 +404,11 @@ class FloatingFullscreenModeViewModel(
         }
     }
 
-    private suspend fun handleStreamResponse(stream: Stream<String>, cleaners: List<String>) {
+    private suspend fun handleStreamResponse(
+        stream: Stream<String>,
+        cleaners: List<String>,
+        speechGeneration: Long,
+    ) {
         val sb = StringBuilder()
         var isFirstSentence = true
         var isFirstChar = true
@@ -374,13 +423,13 @@ class FloatingFullscreenModeViewModel(
             val cutIdx = TtsSegmenter.nextSegmentEnd(sb)
             if (cutIdx >= 0) {
                 val segment = sb.substring(0, cutIdx)
-                if (trySpeak(segment, isFirstSentence, cleaners, armMicSuppression = isFirstSentence)) {
+                if (trySpeak(segment, isFirstSentence, cleaners, armMicSuppression = isFirstSentence, speechGeneration = speechGeneration)) {
                     isFirstSentence = false
                     sb.delete(0, cutIdx)
                 }
             }
         }
-        trySpeak(sb.toString(), isFirstSentence, cleaners, armMicSuppression = isFirstSentence)
+        trySpeak(sb.toString(), isFirstSentence, cleaners, armMicSuppression = isFirstSentence, speechGeneration = speechGeneration)
     }
 
     private fun handleStaticResponse(content: String) {
@@ -392,7 +441,8 @@ class FloatingFullscreenModeViewModel(
         text: String,
         interrupt: Boolean,
         cleaners: List<String>,
-        armMicSuppression: Boolean = false
+        armMicSuppression: Boolean = false,
+        speechGeneration: Long,
     ): Boolean {
         val cleanText = speechManager.cleanTextForTts(text.trim(), cleaners)
         if (cleanText.isNotEmpty()) {
@@ -400,16 +450,20 @@ class FloatingFullscreenModeViewModel(
             if (isStreamingTtsMuted && !isWaveActive) {
                 return true
             }
+            // 消费分段，避免 collector 卡住；过期 speech 代不得再 enqueue。
+            if (!voiceSession.allowsQueuedSpeak(speechGeneration)) {
+                return true
+            }
             if (armMicSuppression && isWaveActive) {
                 suppressRecognitionUntilMs = System.currentTimeMillis() + FULLSCREEN_TTS_CAPTURE_SUPPRESS_MS
             }
-            enqueueSpeak(cleanText, interrupt)
+            enqueueSpeak(cleanText, interrupt, speechGeneration)
             return true
         }
         return false
     }
 
-    private fun enqueueSpeak(text: String, interrupt: Boolean) {
+    private fun enqueueSpeak(text: String, interrupt: Boolean, speechGeneration: Long) {
         val previousJob = if (interrupt) {
             ttsSpeakJob?.cancel()
             null
@@ -421,6 +475,10 @@ class FloatingFullscreenModeViewModel(
             coroutineScope.launch {
                 try {
                     previousJob?.join()
+                    // join 之后仍可能已经 stop/end；不核对就会在 voiceService.stop 后再 speak。
+                    if (!voiceSession.allowsQueuedSpeak(speechGeneration)) {
+                        return@launch
+                    }
                     speechManager.voiceService.speak(text, interrupt)
                 } catch (_: kotlinx.coroutines.CancellationException) {
                 } catch (e: Exception) {
@@ -432,6 +490,17 @@ class FloatingFullscreenModeViewModel(
     // ===== 语音交互 =====
 
     fun startVoiceCapture() {
+        startVoiceCaptureInternal()
+    }
+
+    private fun startWaveCaptureIfCurrent(jobSession: Long) {
+        if (!voiceSession.allowsCaptureStart(jobSession)) {
+            return
+        }
+        startVoiceCaptureInternal()
+    }
+
+    private fun startVoiceCaptureInternal() {
         // 如果AI正在生成，尝试取消
         val lastMessage = floatContext.messages.lastOrNull()
         val isAiWorking = lastMessage?.sender == "think" || 
@@ -441,12 +510,14 @@ class FloatingFullscreenModeViewModel(
             floatContext.onCancelMessage?.invoke()
         }
         
+        captureSession = voiceSession.session
         speechManager.startListening { errorMsg ->
             aiMessage = errorMsg
         }
     }
 
     fun stopVoiceCapture(isCancel: Boolean) {
+        if (isCancel) captureSession = null
         speechManager.stopListening(isCancel)
     }
 
@@ -455,6 +526,8 @@ class FloatingFullscreenModeViewModel(
         enableAutoTimeout: Boolean = false
     ) {
         wakeEnterJob?.cancel()
+        voiceSession = voiceSession.enterWave()
+        val sessionAtEnter = voiceSession.session
         wakeEnterJob = coroutineScope.launch {
             // 语音态 UI 先切换出来（唤醒场景更符合预期）
             isWaveActive = true
@@ -464,12 +537,16 @@ class FloatingFullscreenModeViewModel(
 
             playWakeGreetingIfNeeded(wakeLaunched)
 
-            startVoiceCapture()
+            if (!voiceSession.allowsCaptureStart(sessionAtEnter)) {
+                return@launch
+            }
+            startWaveCaptureIfCurrent(sessionAtEnter)
             if (speechManager.isRecording && waveModeAutoTimeoutEnabled) {
                 lastVoiceActivityAtMs = System.currentTimeMillis()
                 startInactivityMonitor()
             } else {
                 if (!speechManager.isRecording) {
+                    voiceSession = voiceSession.leaveWave(activeAiStreamIdentity)
                     isWaveActive = false
                     showBottomControls = true
                 }
@@ -478,6 +555,9 @@ class FloatingFullscreenModeViewModel(
     }
     
     fun exitWaveMode() {
+        captureSession = null
+        // 点头像/超时离开也必须关掉 waveOpen，否则 interrupt 的延迟 start 会把麦重新打开。
+        voiceSession = voiceSession.leaveWave(activeAiStreamIdentity)
         wakeEnterJob?.cancel()
         wakeEnterJob = null
         cancelPendingVoiceCaptureResume()
@@ -524,6 +604,9 @@ class FloatingFullscreenModeViewModel(
 
     /** Stop producers too, so a queued stream cannot resume speech after ending voice. */
     fun endVoiceSession() {
+        val streamId = activeAiStreamIdentity
+        // 先抬代并记下丢弃的流，再 cancel：否则 identity 被清空后 compose 会按同一 timestamp 再挂 collector。
+        voiceSession = voiceSession.endSession(streamId)
         floatContext.onCancelMessage?.invoke()
         aiStreamJob?.cancel()
         aiStreamJob = null
@@ -577,6 +660,7 @@ class FloatingFullscreenModeViewModel(
 
      suspend fun initialize(autoEnterVoiceChat: Boolean = false, wakeLaunched: Boolean = false) {
          speechManager.initialize()
+         voiceSession = voiceSession.reset()
          cancelPendingVoiceCaptureResume()
          prefsJob?.cancel()
          prefsJob = coroutineScope.launch {
@@ -606,11 +690,15 @@ class FloatingFullscreenModeViewModel(
      }
 
      fun cleanup() {
+        captureSession = null
         val view = floatContext.chatService?.getComposeView()
         speechManager.releaseFocus(view)
         speechManager.cleanup()
+        voiceSession = voiceSession.reset()
         ttsSpeakJob?.cancel()
         ttsSpeakJob = null
+        interruptResumeJob?.cancel()
+        interruptResumeJob = null
         cancelPendingVoiceCaptureResume()
 
         prefsJob?.cancel()

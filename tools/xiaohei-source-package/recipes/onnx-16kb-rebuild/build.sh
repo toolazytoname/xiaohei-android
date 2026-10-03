@@ -16,12 +16,16 @@ COMMIT="2e2543fbe9fae542f921d47a72d21d5a4ef0b710"
 TAG="v1.29.0"
 VERSION="1.29.0"
 
-SDK="${ANDROID_SDK_ROOT:-/Users/lazy/Library/Android/sdk}"
+SDK="${ANDROID_SDK_ROOT:?Set ANDROID_SDK_ROOT to the Android SDK directory}"
 NDK="${NDK:-$SDK/ndk/27.1.12297006}"
-# Proven successful home for this recipe. Do not default to the private JDK 21 toolchain.
-DEFAULT_JDK17="/Users/lazy/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home"
-JDK="${JAVA_HOME_OVERRIDE:-$DEFAULT_JDK17}"
-PY="${PY:-/opt/homebrew/bin/python3.12}"
+JDK="${JAVA_HOME_OVERRIDE:?Set JAVA_HOME_OVERRIDE to a JDK 17 home}"
+PY="${PY:-$(command -v python3.12 || true)}"
+CMAKE_BIN="${CMAKE:?Set CMAKE to a CMake 3.28.6 executable}"
+case "$(uname -s)-$(uname -m)" in
+  Darwin-arm64|Darwin-x86_64) HOST_PREBUILT=darwin-x86_64 ;;
+  Linux-x86_64) HOST_PREBUILT=linux-x86_64 ;;
+  *) echo "Unsupported NDK host" >&2; exit 1 ;;
+esac
 ABI="arm64-v8a"
 API="26"
 PAGE_LDFLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
@@ -41,12 +45,10 @@ MIRROR="$ROOT/deps-mirror"
 OUT="$ROOT/out"
 EVIDENCE="$ROOT/evidence"
 VENV="$ROOT/venv"
-CMAKE_ROOT="$ROOT/toolchains/cmake-3.28.6-macos-universal/CMake.app/Contents"
-CMAKE_BIN="$CMAKE_ROOT/bin/cmake"
 NINJA_BIN="${NINJA:-$SDK/cmake/3.22.1/bin/ninja}"
-READELF="$NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-readelf"
-NM="$NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-nm"
-HOST_AAR="$ROOT/cache-aar/onnxruntime-android-1.29.0.aar"
+READELF="$NDK/toolchains/llvm/prebuilt/$HOST_PREBUILT/bin/llvm-readelf"
+NM="$NDK/toolchains/llvm/prebuilt/$HOST_PREBUILT/bin/llvm-nm"
+HOST_AAR="${ONNX_AAR:?Set ONNX_AAR to official onnxruntime-android 1.29.0 AAR}"
 PATCH="$ROOT/cmake-common-page-size.patch"
 LOG="$ROOT/logs/build.py.cpu.log"
 AAR_NAME="onnxruntime-android-1.29.0-arm64-cpu-16kb.aar"
@@ -169,11 +171,13 @@ echo "using JDK 17 at $JDK ($jdk_line)"
 [[ -x "$NM" ]] || fail "llvm-nm missing: $NM"
 [[ -x "$NINJA_BIN" ]] || fail "ninja missing: $NINJA_BIN"
 [[ -f "$HOST_AAR" ]] || fail "cached 1.29.0 AAR missing: $HOST_AAR"
+[[ "$(shasum -a 256 "$HOST_AAR" | awk '{print $1}')" == "e97540ca78fe36f6fe2013f82843414fb843b6c7681fb04644cba5e1406662dd" ]] || fail "ONNX official AAR hash mismatch"
 [[ -f "$PATCH" ]] || fail "page-size patch missing: $PATCH"
 
 ARCHIVE="$DOWNLOADS/onnxruntime-${COMMIT}.tar.gz"
 [[ -f "$ARCHIVE" ]] || fail "source archive missing (no re-download): $ARCHIVE"
 ARCHIVE_SHA="$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')"
+[[ "$ARCHIVE_SHA" == "00a7483d894037b23e5f2a7d9b18c4026e3585e2636b316cd2870b6e1bc660cb" ]] || fail "ONNX source archive hash mismatch"
 echo "$ARCHIVE_SHA  $ARCHIVE" | tee "$DOWNLOADS/source-archive.sha256"
 
 if [[ ! -f "$SRC/VERSION_NUMBER" ]]; then
@@ -184,14 +188,9 @@ fi
 GOT_VER="$(tr -d '[:space:]' < "$SRC/VERSION_NUMBER")"
 [[ "$GOT_VER" == "$VERSION" ]] || fail "VERSION_NUMBER=$GOT_VER want $VERSION"
 
-CMAKE_TGZ="$DOWNLOADS/cmake-3.28.6-macos-universal.tar.gz"
-[[ -f "$CMAKE_TGZ" ]] || fail "cmake archive missing (no re-download): $CMAKE_TGZ"
-if [[ ! -x "$CMAKE_BIN" ]]; then
-  export ONNX_STAGE="extract-cmake"
-  tar -xzf "$CMAKE_TGZ" -C "$ROOT/toolchains"
-fi
-[[ -x "$CMAKE_BIN" ]] || fail "task-local cmake missing after extract"
-CMAKE_SHA="$(shasum -a 256 "$CMAKE_TGZ" | awk '{print $1}')"
+[[ -x "$CMAKE_BIN" ]] || fail "CMAKE executable missing: $CMAKE_BIN"
+[[ "$("$CMAKE_BIN" --version | head -1)" == "cmake version 3.28.6" ]] || fail "CMake 3.28.6 is required"
+CMAKE_SHA="$(shasum -a 256 "$CMAKE_BIN" | awk '{print $1}')"
 "$CMAKE_BIN" --version | head -1 | tee "$EVIDENCE/cmake-version.txt"
 
 export ONNX_STAGE="apply-page-size-patch"
@@ -308,7 +307,7 @@ json.dump({
   "runtime_vad_vits_tested": False,
   "operators": "default full (MINIMAL/REDUCED/DISABLE_CONTRIB not enabled)",
   "source_archive_sha256": sys.argv[5],
-  "cmake_archive_sha256": sys.argv[6],
+  "cmake_executable_sha256": sys.argv[6],
   "source_dir": sys.argv[8],
   "build_dir": sys.argv[11],
   "deps_mirror": sys.argv[12],
@@ -360,7 +359,7 @@ export JAVA_HOME="$JDK"
 export ANDROID_HOME="$SDK"
 export ANDROID_SDK_ROOT="$SDK"
 export ANDROID_NDK_HOME="$NDK"
-export PATH="$CMAKE_ROOT/bin:$VENV/bin:$(dirname "$NINJA_BIN"):$JDK/bin:$PATH"
+export PATH="$(dirname "$CMAKE_BIN"):$VENV/bin:$(dirname "$NINJA_BIN"):$JDK/bin:$PATH"
 
 FC_DEFINES_FILE="$EVIDENCE/cmake-fc-defines.txt"
 python3 - "$EVIDENCE/dep-cache.json" "$FC_DEFINES_FILE" <<'PY'

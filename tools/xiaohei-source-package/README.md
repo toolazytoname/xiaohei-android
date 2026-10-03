@@ -13,6 +13,6 @@ python3 -m unittest discover -s tools/xiaohei-source-package/tests
 - 上游与固定 terminal 子模块分别归档。展开后还要应用 `patches/terminal-16kb.patch`。
 - 未跟踪源码文件按NUL分隔枚举，不遗漏嵌套目录或中文/空格名称；外部符号链接及 `_verify_work` 不导出。
 - 本地AAR只记录实际哈希和配方，不自动发布二进制。补充了GIF、ONNX、graphics-path、Filament的白名单配方。
-- 配方来自当前工作区，部分仍是macOS特定工具链路径；运行前按配方覆盖NDK/SDK/CMAKE/AAR等环境变量。**未完成从公开干净环境重建验收。**
+- 配方来自当前工作区，现要求显式SDK/JDK/AAR输入并支持Darwin arm64/x86_64与Linux x86_64；详见recipes/README.md。GIF已在新目录重建并逐成员核对；**全部依赖的公开干净环境重建仍未完成。**
 - `strict` 只表示调用者给出的构建时源码指纹匹配，不证明全部二进制依赖的源码/许可齐全；不要用事后生成的同一指纹冒充构建时证据。
-- 私有签名、接口配置、设备数据不属于源码包，不应添加到版本控制。当前仍需独立审查iText、FFmpeg及全部传递依赖许可。
+- 私有签名、接口配置、设备数据不属于源码包，不应添加到版本控制。iText已从本轮源码移除，产物仍须检查；当前仍需独立审查FFmpeg及全部传递依赖许可。

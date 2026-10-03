@@ -1,0 +1,43 @@
+name: Xiaohei release tooling
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feat/common-base]
+    paths:
+      - .github/workflows/xiaohei-release-tooling.yml
+      - tools/xiaohei-release/**
+      - tools/xiaohei-source-package/**
+  pull_request:
+    paths:
+      - .github/workflows/xiaohei-release-tooling.yml
+      - tools/xiaohei-release/**
+      - tools/xiaohei-source-package/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xiaohei-release-tooling-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Source bundle and recipe input tests (no private dependencies)
+        run: python3 -m unittest discover -s tools/xiaohei-source-package/tests -v
+      - name: APK / AAB verifier tests
+        run: python3 -m unittest discover -s tools/xiaohei-release/tests -v
+      - name: Native recipe shell syntax
+        run: find tools/xiaohei-source-package/recipes -name '*.sh' -exec bash -n {} \;
+      # This workflow deliberately does not publish APKs, use signing secrets,
+      # or claim Android/runtime validation. Native builds need explicit inputs.

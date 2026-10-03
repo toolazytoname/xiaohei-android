@@ -1,0 +1,14 @@
+{
+  "Common": {
+    "tests": 543,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "CommonRelease": {
+    "tests": 543,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

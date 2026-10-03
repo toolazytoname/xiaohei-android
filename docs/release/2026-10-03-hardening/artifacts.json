@@ -1,0 +1,23 @@
+{
+  "store_apk": {
+    "path": "app/build/outputs/apk/commonRelease/app-common-release.apk",
+    "bytes": 240890967,
+    "sha256": "2d65d333e1219f491a42624cc3b513db2f4347bc949fb4d0daca925340712edc",
+    "dex_files": 16,
+    "dex_with_itext_namespace": []
+  },
+  "store_aab": {
+    "path": "app/build/outputs/bundle/commonRelease/app-commonRelease.aab",
+    "bytes": 253624311,
+    "sha256": "96a3a6d5b3843b16e9601e592bf66b6d2e8c560ec21ea01513216a67fab356b2",
+    "dex_files": 16,
+    "dex_with_itext_namespace": []
+  },
+  "enhanced_apk": {
+    "path": "app/build/outputs/apk/common/app-common.apk",
+    "bytes": 300755223,
+    "sha256": "e06dc44667c4537dc23f8c2a387f442170cbdf131e0579cbcae9d6031cfec5fa",
+    "dex_files": 43,
+    "dex_with_itext_namespace": []
+  }
+}

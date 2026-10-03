@@ -1,0 +1,2414 @@
+{
+  "schema_version": 3,
+  "generated_at": "2026-10-03T06:46:57.506094+00:00",
+  "profile": "enhanced",
+  "apk": {
+    "file": "app-common.apk",
+    "bytes": 300755223,
+    "sha256": "e06dc44667c4537dc23f8c2a387f442170cbdf131e0579cbcae9d6031cfec5fa",
+    "native": {
+      "lib/arm64-v8a/libFbxWrapper.so": {
+        "sha256": "5cbe540826d78f5a00ad820e9b30307255426666fd340048a8c4e81d1afe10e4",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 1654384,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1670768,
+            "memory_size": 49552,
+            "alignment": 16384,
+            "offset_mod_16kb": 15984,
+            "address_mod_16kb": 15984,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1723128,
+            "memory_size": 4696,
+            "alignment": 16384,
+            "offset_mod_16kb": 2808,
+            "address_mod_16kb": 2808,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 1670768,
+            "memory_size": 49552,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libLlamaWrapper.so": {
+        "sha256": "875b1f370dff6ce425b5900095c11534ccaa19f54f199b35e9aabe1b17f2772e",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 1006256,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1022640,
+            "memory_size": 25936,
+            "alignment": 16384,
+            "offset_mod_16kb": 6832,
+            "address_mod_16kb": 6832,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1050360,
+            "memory_size": 2184,
+            "alignment": 16384,
+            "offset_mod_16kb": 1784,
+            "address_mod_16kb": 1784,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 1022640,
+            "memory_size": 25936,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libggml-base.so",
+          "libggml-cpu.so",
+          "libggml.so",
+          "libllama-common.so",
+          "libllama.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libMNN.so": {
+        "sha256": "370490d007749c7c178388e43c7b28503d962116b05f45f4d18dfec5cdb370bf",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 22418272,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 22434656,
+            "memory_size": 322720,
+            "alignment": 16384,
+            "offset_mod_16kb": 4960,
+            "address_mod_16kb": 4960,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 22759496,
+            "memory_size": 35560,
+            "alignment": 16384,
+            "offset_mod_16kb": 2120,
+            "address_mod_16kb": 2120,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 22434656,
+            "memory_size": 322720,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libEGL.so",
+          "libGLESv3.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libMNNWrapper.so": {
+        "sha256": "d02a785fd8621dd5fcdc693cc7189a333de59d72da43bc59f0429af007c26dd0",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 5576976,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5593360,
+            "memory_size": 75504,
+            "alignment": 16384,
+            "offset_mod_16kb": 6416,
+            "address_mod_16kb": 6416,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5682992,
+            "memory_size": 2880,
+            "alignment": 16384,
+            "offset_mod_16kb": 14128,
+            "address_mod_16kb": 14128,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 5593360,
+            "memory_size": 75504,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libEGL.so",
+          "libGLESv3.so",
+          "libMNN.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libMmdWrapper.so": {
+        "sha256": "2043e1ad48069a9cd8b584bb29ab48a7fdd8caf02b4f4cd79531df09173d7e54",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 5269696,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5286080,
+            "memory_size": 120640,
+            "alignment": 16384,
+            "offset_mod_16kb": 10432,
+            "address_mod_16kb": 10432,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5407728,
+            "memory_size": 41632,
+            "alignment": 16384,
+            "offset_mod_16kb": 1008,
+            "address_mod_16kb": 1008,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 5286080,
+            "memory_size": 120640,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libGLESv3.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libandroidx.graphics.path.so": {
+        "sha256": "890b43ae67a03663ad3befd86aa58ba47879b989bb5bfd079cf57f3055adb5a3",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 7008,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 23392,
+            "memory_size": 9376,
+            "alignment": 16384,
+            "offset_mod_16kb": 7008,
+            "address_mod_16kb": 7008,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 40688,
+            "memory_size": 16,
+            "alignment": 16384,
+            "offset_mod_16kb": 7920,
+            "address_mod_16kb": 7920,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 23392,
+            "memory_size": 9376,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libavcodec.so": {
+        "sha256": "7522b33afd9015b2e70e63481980383863ac3aa4413828af812e63d58085256a",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 4848036,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 4852160,
+            "memory_size": 11057728,
+            "alignment": 4096,
+            "offset_mod_16kb": 14784,
+            "address_mod_16kb": 2496,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 15913984,
+            "memory_size": 511488,
+            "alignment": 4096,
+            "offset_mod_16kb": 13312,
+            "address_mod_16kb": 5120,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 16429568,
+            "memory_size": 6706592,
+            "alignment": 4096,
+            "offset_mod_16kb": 512,
+            "address_mod_16kb": 12800,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 15913984,
+            "memory_size": 515072,
+            "end_mod_16kb": 12288
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libswresample.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 16429568,
+            "end": 16433152
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libavdevice.so": {
+        "sha256": "96098f434e6a353efb848c8b6a08e4e7bc377921548ea91ba8261430d55e4400",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 27544,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 31640,
+            "memory_size": 23496,
+            "alignment": 4096,
+            "offset_mod_16kb": 11160,
+            "address_mod_16kb": 15256,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 59232,
+            "memory_size": 4800,
+            "alignment": 4096,
+            "offset_mod_16kb": 1888,
+            "address_mod_16kb": 10080,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 59232,
+            "memory_size": 6304,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavcodec.so",
+          "libavfilter.so",
+          "libavformat.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libavfilter.so": {
+        "sha256": "32f7943aa79f8401301a07037ef5e3cc2194adf1a5e4514e70dfd0a65e3c43aa",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 1312356,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 1316452,
+            "memory_size": 3640284,
+            "alignment": 4096,
+            "offset_mod_16kb": 1636,
+            "address_mod_16kb": 5732,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 4960832,
+            "memory_size": 518560,
+            "alignment": 4096,
+            "offset_mod_16kb": 4672,
+            "address_mod_16kb": 12864,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 5483488,
+            "memory_size": 21088,
+            "alignment": 4096,
+            "offset_mod_16kb": 15328,
+            "address_mod_16kb": 11232,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 4960832,
+            "memory_size": 519616,
+            "end_mod_16kb": 8192
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavcodec.so",
+          "libavformat.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libswresample.so",
+          "libswscale.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 5483488,
+            "end": 5488640
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libavformat.so": {
+        "sha256": "f43a74f0e201433ada3f3a07cd3fb2d1dee9011061aa9df7b2661d4bfb0c238a",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 2179444,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 2183552,
+            "memory_size": 2853200,
+            "alignment": 4096,
+            "offset_mod_16kb": 384,
+            "address_mod_16kb": 4480,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 5040848,
+            "memory_size": 271992,
+            "alignment": 4096,
+            "offset_mod_16kb": 2768,
+            "address_mod_16kb": 10960,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 5316936,
+            "memory_size": 16144,
+            "alignment": 4096,
+            "offset_mod_16kb": 12616,
+            "address_mod_16kb": 8520,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 5040848,
+            "memory_size": 275760,
+            "end_mod_16kb": 8192
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavcodec.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 5316936,
+            "end": 5324800
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libavutil.so": {
+        "sha256": "acd35a3212d9e80bb79450e61af130c56d9dd20c55d039002ad1f40d71dce84b",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 132636,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 136732,
+            "memory_size": 421044,
+            "alignment": 4096,
+            "offset_mod_16kb": 1564,
+            "address_mod_16kb": 5660,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 561872,
+            "memory_size": 59864,
+            "alignment": 4096,
+            "offset_mod_16kb": 13008,
+            "address_mod_16kb": 4816,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 625832,
+            "memory_size": 1109824,
+            "alignment": 4096,
+            "offset_mod_16kb": 7336,
+            "address_mod_16kb": 3240,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 561872,
+            "memory_size": 60720,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libbash.so": {
+        "sha256": "6fdd98014bfbeaf3084f1b56d878f7e13b943ab19c02bd00bf901384a2d24f9f",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 2097152,
+            "memory_size": 1633472,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 3747008,
+            "memory_size": 37696,
+            "alignment": 16384,
+            "offset_mod_16kb": 11456,
+            "address_mod_16kb": 11456,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 3792256,
+            "memory_size": 198600,
+            "alignment": 16384,
+            "offset_mod_16kb": 7552,
+            "address_mod_16kb": 7552,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 3747008,
+            "memory_size": 37696,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libbusybox.so": {
+        "sha256": "68ce6e0c640fceba26b834c454aab18a15911e007002485aa25f77387463b82e",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 4194304,
+            "memory_size": 1458432,
+            "alignment": 65536,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5722096,
+            "memory_size": 55024,
+            "alignment": 65536,
+            "offset_mod_16kb": 4080,
+            "address_mod_16kb": 4080,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 5722096,
+            "memory_size": 28688,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libc++_shared.so": {
+        "sha256": "3e6d529147ffd66bd31fab85c8902b526abd1c06e43554ce64b97519e255e4b3",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 954784,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 958880,
+            "memory_size": 34544,
+            "alignment": 4096,
+            "offset_mod_16kb": 4512,
+            "address_mod_16kb": 8608,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 997520,
+            "memory_size": 29728,
+            "alignment": 4096,
+            "offset_mod_16kb": 6288,
+            "address_mod_16kb": 14480,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 958880,
+            "memory_size": 36448,
+            "end_mod_16kb": 12288
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 997520,
+            "end": 999424
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libdragonbones_native.so": {
+        "sha256": "88cd68e109a94d90d81a2f1ab49cc0b8bfb12f40bf6d908c9c0fe364dbd5476d",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 2655440,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2671824,
+            "memory_size": 64304,
+            "alignment": 16384,
+            "offset_mod_16kb": 1232,
+            "address_mod_16kb": 1232,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2745816,
+            "memory_size": 11864,
+            "alignment": 16384,
+            "offset_mod_16kb": 9688,
+            "address_mod_16kb": 9688,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 2671824,
+            "memory_size": 64304,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libGLESv2.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libffmpegkit.so": {
+        "sha256": "587eeecea861a96e62d70fca966fdd578ebce96b7311f4c55a7363aebe991648",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 446384,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 450480,
+            "memory_size": 17352,
+            "alignment": 4096,
+            "offset_mod_16kb": 4016,
+            "address_mod_16kb": 8112,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 471928,
+            "memory_size": 11040,
+            "alignment": 4096,
+            "offset_mod_16kb": 4984,
+            "address_mod_16kb": 13176,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 450480,
+            "memory_size": 20560,
+            "end_mod_16kb": 12288
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavcodec.so",
+          "libavdevice.so",
+          "libavfilter.so",
+          "libavformat.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libswresample.so",
+          "libswscale.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 471928,
+            "end": 475136
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libffmpegkit_abidetect.so": {
+        "sha256": "7bb99b793ab657de12a313ef670f7f1dbaa3b29317feff565b26c6596b6b8080",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 26176,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 30272,
+            "memory_size": 2072,
+            "alignment": 4096,
+            "offset_mod_16kb": 9792,
+            "address_mod_16kb": 13888,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 36440,
+            "memory_size": 125,
+            "alignment": 4096,
+            "offset_mod_16kb": 11864,
+            "address_mod_16kb": 3672,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 30272,
+            "memory_size": 2496,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libfilament-jni.so": {
+        "sha256": "ab1cfbc1ec99ec083ea457df8a643642be7bacb738c9438913c01a6d1488cc22",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 2690480,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2706864,
+            "memory_size": 45648,
+            "alignment": 16384,
+            "offset_mod_16kb": 3504,
+            "address_mod_16kb": 3504,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2764104,
+            "memory_size": 9912,
+            "alignment": 16384,
+            "offset_mod_16kb": 11592,
+            "address_mod_16kb": 11592,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 2706864,
+            "memory_size": 45648,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libEGL.so",
+          "libGLESv3.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libfilament-utils-jni.so": {
+        "sha256": "8578e5c0811bc254ec239944054c9d7649e0668f4d7ff1784b09b667666a59ea",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 475200,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 491584,
+            "memory_size": 16320,
+            "alignment": 16384,
+            "offset_mod_16kb": 64,
+            "address_mod_16kb": 64,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 516440,
+            "memory_size": 1240,
+            "alignment": 16384,
+            "offset_mod_16kb": 8536,
+            "address_mod_16kb": 8536,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 491584,
+            "memory_size": 16320,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libfilament-jni.so",
+          "libgltfio-jni.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libggml-base.so": {
+        "sha256": "6e1ecd68040538314af14708b8711a8104fbf22c520724d3d3adaef10221bc7f",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 1777792,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1794176,
+            "memory_size": 40832,
+            "alignment": 16384,
+            "offset_mod_16kb": 8320,
+            "address_mod_16kb": 8320,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1843248,
+            "memory_size": 7040,
+            "alignment": 16384,
+            "offset_mod_16kb": 8240,
+            "address_mod_16kb": 8240,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 1794176,
+            "memory_size": 40832,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libm.so",
+          "libomp.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libggml-cpu.so": {
+        "sha256": "4872a8462928619d6dd98e0d3810d24e75623ba69816daefcd3aabb6ba1a0238",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 1469712,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1486096,
+            "memory_size": 21232,
+            "alignment": 16384,
+            "offset_mod_16kb": 11536,
+            "address_mod_16kb": 11536,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1511120,
+            "memory_size": 545688,
+            "alignment": 16384,
+            "offset_mod_16kb": 3792,
+            "address_mod_16kb": 3792,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 1486096,
+            "memory_size": 21232,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libggml-base.so",
+          "libm.so",
+          "libomp.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libggml.so": {
+        "sha256": "b29fa81e34a3a22287c5024e0cceb34bf25d6d578ff4eccd2e81a462f0fa75df",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 214768,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 231152,
+            "memory_size": 14608,
+            "alignment": 16384,
+            "offset_mod_16kb": 1776,
+            "address_mod_16kb": 1776,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 250424,
+            "memory_size": 2224,
+            "alignment": 16384,
+            "offset_mod_16kb": 4664,
+            "address_mod_16kb": 4664,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 231152,
+            "memory_size": 14608,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libggml-base.so",
+          "libggml-cpu.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libgltfio-jni.so": {
+        "sha256": "abb56a16ecf009cdd1de8285602d602f0aaabd487d292c0ceb278c82946c28a8",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 2723808,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2740192,
+            "memory_size": 28704,
+            "alignment": 16384,
+            "offset_mod_16kb": 4064,
+            "address_mod_16kb": 4064,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2781392,
+            "memory_size": 27688,
+            "alignment": 16384,
+            "offset_mod_16kb": 12496,
+            "address_mod_16kb": 12496,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 2740192,
+            "memory_size": 28704,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libfilament-jni.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libllama-common.so": {
+        "sha256": "85f8c956c053dddc24e928db53f8127f323d04406f6b7e630621b265e1b4c810",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 13070720,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 13087104,
+            "memory_size": 151168,
+            "alignment": 16384,
+            "offset_mod_16kb": 12672,
+            "address_mod_16kb": 12672,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 13253360,
+            "memory_size": 103544,
+            "alignment": 16384,
+            "offset_mod_16kb": 15088,
+            "address_mod_16kb": 15088,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 13087104,
+            "memory_size": 151168,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libggml-base.so",
+          "libggml-cpu.so",
+          "libggml.so",
+          "libllama.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libllama.so": {
+        "sha256": "62917b848b419c17ae836915dc2b3e233c26a7ab0ef3663d3b60a46767dd26f7",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 8158000,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 8174384,
+            "memory_size": 132304,
+            "alignment": 16384,
+            "offset_mod_16kb": 15152,
+            "address_mod_16kb": 15152,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 8320080,
+            "memory_size": 11504,
+            "alignment": 16384,
+            "offset_mod_16kb": 13392,
+            "address_mod_16kb": 13392,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 8174384,
+            "memory_size": 132304,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libggml-base.so",
+          "libggml-cpu.so",
+          "libggml.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libmediapipe_tasks_text_jni.so": {
+        "sha256": "eff7c89a823f24f948f245c9bfb02e3ce121e48a86146c86fd3ec869f6da5b87",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 7566824,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 7571032,
+            "memory_size": 333064,
+            "alignment": 4096,
+            "offset_mod_16kb": 13912,
+            "address_mod_16kb": 1624,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 7571032,
+            "memory_size": 154024,
+            "end_mod_16kb": 8192
+          }
+        ],
+        "needed": [
+          "libEGL.so",
+          "libGLESv2.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 7725056,
+            "end": 7733248
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libmlkit_google_ocr_pipeline.so": {
+        "sha256": "b5d0143bd54b9b7571a2a333fe50b35e4034e25ac99d9f54819da13cfbbc67f2",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 9473920,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 9474048,
+            "memory_size": 313000,
+            "alignment": 4096,
+            "offset_mod_16kb": 4096,
+            "address_mod_16kb": 4096,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 9791152,
+            "memory_size": 418944,
+            "alignment": 4096,
+            "offset_mod_16kb": 5808,
+            "address_mod_16kb": 9904,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 9474048,
+            "memory_size": 315392,
+            "end_mod_16kb": 8192
+          }
+        ],
+        "needed": [
+          "libEGL.so",
+          "libGLESv2.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 9791152,
+            "end": 9797632
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libobjectbox-jni.so": {
+        "sha256": "ef6bdec681a3a7249e42ea23739595f64616f515e73c9546215d914983753f63",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 2515520,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2531904,
+            "memory_size": 56768,
+            "alignment": 16384,
+            "offset_mod_16kb": 8768,
+            "address_mod_16kb": 8768,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2604872,
+            "memory_size": 7752,
+            "alignment": 16384,
+            "offset_mod_16kb": 16200,
+            "address_mod_16kb": 16200,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 2531904,
+            "memory_size": 56768,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libomp.so": {
+        "sha256": "44e6a5f06cbf3aaa7a974191815153b37fa44fa85c2cef392e5ef29d236d554d",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 288896,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 5,
+            "address": 305280,
+            "memory_size": 618320,
+            "alignment": 16384,
+            "offset_mod_16kb": 10368,
+            "address_mod_16kb": 10368,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 939984,
+            "memory_size": 10288,
+            "alignment": 16384,
+            "offset_mod_16kb": 6096,
+            "address_mod_16kb": 6096,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 964096,
+            "memory_size": 22680,
+            "alignment": 16384,
+            "offset_mod_16kb": 13824,
+            "address_mod_16kb": 13824,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 939984,
+            "memory_size": 10288,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libonnxruntime.so": {
+        "sha256": "06d24514544ad43c7f755789d81abb2067603d9fa48e38334dc36c3d09abe29e",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 5582584,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 5,
+            "address": 5598976,
+            "memory_size": 16158432,
+            "alignment": 16384,
+            "offset_mod_16kb": 12032,
+            "address_mod_16kb": 12032,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 21773792,
+            "memory_size": 492064,
+            "alignment": 16384,
+            "offset_mod_16kb": 15840,
+            "address_mod_16kb": 15840,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 22266424,
+            "memory_size": 38128,
+            "alignment": 16384,
+            "offset_mod_16kb": 568,
+            "address_mod_16kb": 568,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 21773792,
+            "memory_size": 492064,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libonnxruntime4j_jni.so": {
+        "sha256": "77f436f2ff1b9494dc9c4ff0365ff6a8c8fb7f5f354529862931b56dbdabab79",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 36676,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 5,
+            "address": 53060,
+            "memory_size": 48812,
+            "alignment": 16384,
+            "offset_mod_16kb": 3908,
+            "address_mod_16kb": 3908,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 118256,
+            "memory_size": 12816,
+            "alignment": 16384,
+            "offset_mod_16kb": 3568,
+            "address_mod_16kb": 3568,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 118256,
+            "memory_size": 12816,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "libm.so",
+          "libonnxruntime.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/liboperit_loader.so": {
+        "sha256": "f149774236db1e69b36cc1e4ed3866c7094db2eee52da0d4956aa63a9bb26929",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 137438953472,
+            "memory_size": 288,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 5,
+            "address": 137438970144,
+            "memory_size": 1128,
+            "alignment": 16384,
+            "offset_mod_16kb": 288,
+            "address_mod_16kb": 288,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [],
+        "needed": [],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/liboperit_proot.so": {
+        "sha256": "cb40a1ced11cee76569b4008a9e478c87883ce831152be4eb9570763b82e580d",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 238784,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 255168,
+            "memory_size": 6976,
+            "alignment": 16384,
+            "offset_mod_16kb": 9408,
+            "address_mod_16kb": 9408,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 277104,
+            "memory_size": 11107,
+            "alignment": 16384,
+            "offset_mod_16kb": 14960,
+            "address_mod_16kb": 14960,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 255168,
+            "memory_size": 6976,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/liboperit_ripgrep.so": {
+        "sha256": "28ca352145fe740fa48f0a79f1a2802db2648b15f11c513627ace4ff1dab953e",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 2232992,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2249376,
+            "memory_size": 245088,
+            "alignment": 16384,
+            "offset_mod_16kb": 4768,
+            "address_mod_16kb": 4768,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 2509728,
+            "memory_size": 4848,
+            "alignment": 16384,
+            "offset_mod_16kb": 2976,
+            "address_mod_16kb": 2976,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 2249376,
+            "memory_size": 245088,
+            "end_mod_16kb": 4096
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libpl_droidsonroids_gif.so": {
+        "sha256": "ebe24ae810ef6564296897c44c51bbb0f8e9fe40cde82151865d0721b6199194",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 39504,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 55888,
+            "memory_size": 9648,
+            "alignment": 16384,
+            "offset_mod_16kb": 6736,
+            "address_mod_16kb": 6736,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 73272,
+            "memory_size": 48,
+            "alignment": 16384,
+            "offset_mod_16kb": 7736,
+            "address_mod_16kb": 7736,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 55888,
+            "memory_size": 9648,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libGLESv2.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libpty.so": {
+        "sha256": "8ab91ef9a3f1e3b7fe2a99a82c9ac943883002b07e549768964a128d2a74b916",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 6528,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 22912,
+            "memory_size": 9856,
+            "alignment": 16384,
+            "offset_mod_16kb": 6528,
+            "address_mod_16kb": 6528,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 22912,
+            "memory_size": 9856,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libquickjsjni.so": {
+        "sha256": "d295bc831ef0cb8ea5921dadc372827e9ef6a7f71efa8c087ae0735d04bf9b99",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 1465680,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1482064,
+            "memory_size": 58032,
+            "alignment": 16384,
+            "offset_mod_16kb": 7504,
+            "address_mod_16kb": 7504,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1541888,
+            "memory_size": 4656,
+            "alignment": 16384,
+            "offset_mod_16kb": 1792,
+            "address_mod_16kb": 1792,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 1482064,
+            "memory_size": 58032,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libsherpa-mnn-jni.so": {
+        "sha256": "4285a62b38c54ca714076bd69007306408c00509568b893eef3fdbf141cef5bb",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 3673568,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 3689952,
+            "memory_size": 82464,
+            "alignment": 16384,
+            "offset_mod_16kb": 3552,
+            "address_mod_16kb": 3552,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 3785072,
+            "memory_size": 109344,
+            "alignment": 16384,
+            "offset_mod_16kb": 368,
+            "address_mod_16kb": 368,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 3689952,
+            "memory_size": 82464,
+            "end_mod_16kb": 4096
+          }
+        ],
+        "needed": [
+          "libMNN.so",
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libsherpa-ncnn-jni.so": {
+        "sha256": "67705736351339a73a2628238e78c596d8b7d30651947018cbd4172526ef2f1b",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 4998896,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5015280,
+            "memory_size": 63760,
+            "alignment": 16384,
+            "offset_mod_16kb": 1776,
+            "address_mod_16kb": 1776,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 5084696,
+            "memory_size": 9000,
+            "alignment": 16384,
+            "offset_mod_16kb": 5656,
+            "address_mod_16kb": 5656,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 5015280,
+            "memory_size": 63760,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "libjnigraphics.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libstreamnative.so": {
+        "sha256": "b8d6ce4646741004f1e23d5c83fb3cb50a31b735f721d5af69ed99d9eb50d40d",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 572688,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 589072,
+            "memory_size": 33520,
+            "alignment": 16384,
+            "offset_mod_16kb": 15632,
+            "address_mod_16kb": 15632,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 626592,
+            "memory_size": 2864,
+            "alignment": 16384,
+            "offset_mod_16kb": 4000,
+            "address_mod_16kb": 4000,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 589072,
+            "memory_size": 33520,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      },
+      "lib/arm64-v8a/libswresample.so": {
+        "sha256": "54b721aaeaa600909790b44a3f561e28f1c57f87ceb2a9f67865caa3aa1f5aca",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 32984,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 37080,
+            "memory_size": 167832,
+            "alignment": 4096,
+            "offset_mod_16kb": 216,
+            "address_mod_16kb": 4312,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 209008,
+            "memory_size": 10856,
+            "alignment": 4096,
+            "offset_mod_16kb": 4208,
+            "address_mod_16kb": 12400,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 223960,
+            "memory_size": 217612,
+            "alignment": 4096,
+            "offset_mod_16kb": 15064,
+            "address_mod_16kb": 10968,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 209008,
+            "memory_size": 12176,
+            "end_mod_16kb": 8192
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 223960,
+            "end": 229376
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libswscale.so": {
+        "sha256": "661f746881c7f9c156eec18b6989d7e8e52eed2e17bf57cf19e0dddc4abb7107",
+        "loads": [
+          {
+            "flags": 4,
+            "address": 0,
+            "memory_size": 25456,
+            "alignment": 4096,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 5,
+            "address": 29552,
+            "memory_size": 457152,
+            "alignment": 4096,
+            "offset_mod_16kb": 9072,
+            "address_mod_16kb": 13168,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 490800,
+            "memory_size": 5472,
+            "alignment": 4096,
+            "offset_mod_16kb": 7472,
+            "address_mod_16kb": 15664,
+            "aligned_16kb": false
+          },
+          {
+            "flags": 6,
+            "address": 500368,
+            "memory_size": 33068,
+            "alignment": 4096,
+            "offset_mod_16kb": 12944,
+            "address_mod_16kb": 8848,
+            "aligned_16kb": false
+          }
+        ],
+        "relro": [
+          {
+            "address": 490800,
+            "memory_size": 8912,
+            "end_mod_16kb": 8192
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libavutil.so",
+          "libc++_shared.so",
+          "libc.so",
+          "libcamera2ndk.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so",
+          "libmediandk.so",
+          "libz.so"
+        ],
+        "load_16kb_pass": false,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 500368,
+            "end": 507904
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libtensorflowlite_jni.so": {
+        "sha256": "7cf23bedbda7cca4b242800f619fafb04f397e1091216d62e7faffdc1b1db375",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 3640288,
+            "alignment": 65536,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 3708376,
+            "memory_size": 72152,
+            "alignment": 65536,
+            "offset_mod_16kb": 5592,
+            "address_mod_16kb": 5592,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 3708376,
+            "memory_size": 31272,
+            "end_mod_16kb": 4096
+          }
+        ],
+        "needed": [
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": false,
+        "relro_page_conflicts": [
+          {
+            "start": 3739648,
+            "end": 3751936
+          }
+        ],
+        "relro_page_protection_pass": false
+      },
+      "lib/arm64-v8a/libtoolpkgwasm.so": {
+        "sha256": "efa60887b2be2633ca8416e10d986a3c8167ac2705245864ac508df0009b7fad",
+        "loads": [
+          {
+            "flags": 5,
+            "address": 0,
+            "memory_size": 1292928,
+            "alignment": 16384,
+            "offset_mod_16kb": 0,
+            "address_mod_16kb": 0,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1309312,
+            "memory_size": 50560,
+            "alignment": 16384,
+            "offset_mod_16kb": 14976,
+            "address_mod_16kb": 14976,
+            "aligned_16kb": true
+          },
+          {
+            "flags": 6,
+            "address": 1362384,
+            "memory_size": 12768,
+            "alignment": 16384,
+            "offset_mod_16kb": 2512,
+            "address_mod_16kb": 2512,
+            "aligned_16kb": true
+          }
+        ],
+        "relro": [
+          {
+            "address": 1309312,
+            "memory_size": 50560,
+            "end_mod_16kb": 0
+          }
+        ],
+        "needed": [
+          "libandroid.so",
+          "libc.so",
+          "libdl.so",
+          "liblog.so",
+          "libm.so"
+        ],
+        "load_16kb_pass": true,
+        "relro_end_16kb_pass": true,
+        "relro_page_conflicts": [],
+        "relro_page_protection_pass": true
+      }
+    },
+    "missing_native_dependencies": {},
+    "non_elf_library_members": {
+      "lib/arm64-v8a/libsudo.so": {
+        "bytes": 2,
+        "sha256": "c3b845abdaedebf19beec1e7b9835edb0f825fa316b02035caf86e01a592937b"
+      }
+    },
+    "stt_notices": {
+      "assets/third_party/stt/Apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "assets/third_party/stt/NOTICES.md": "d571de69dbbbc701810e0d0c4df6f60656f94d32fa08e420123048998f735887",
+      "assets/third_party/stt/Silero-MIT.txt": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+      "assets/third_party/stt/assets.json": "de5cc0c7f718522f5a38e7b995e9cf68eab3cba79b5169c553338c1fdee9a5f4"
+    },
+    "excluded_libraries_present": [
+      "libavcodec.so",
+      "libavdevice.so",
+      "libavfilter.so",
+      "libavformat.so",
+      "libavutil.so",
+      "libc++_shared.so",
+      "libffmpegkit.so",
+      "libffmpegkit_abidetect.so",
+      "libmediapipe_tasks_text_jni.so",
+      "libmlkit_google_ocr_pipeline.so",
+      "liboperit_ripgrep.so",
+      "libsudo.so",
+      "libswresample.so",
+      "libswscale.so",
+      "libtensorflowlite_jni.so"
+    ],
+    "abis": [
+      "arm64-v8a"
+    ],
+    "load_16kb_pass": false,
+    "relro_end_16kb_pass": false,
+    "relro_page_protection_pass": false
+  },
+  "aab": null,
+  "metadata": {
+    "package": "studio.weichao.xiaohei.common",
+    "version_code": 46,
+    "version_name": "1.12.1",
+    "target_sdk": 36,
+    "label": "小黑·增强",
+    "debuggable": true,
+    "permissions": [
+      "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.BIND_VOICE_INTERACTION",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+      "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+      "android.permission.FOREGROUND_SERVICE_SHORT_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+      "android.permission.INTERNET",
+      "android.permission.KILL_BACKGROUND_PROCESSES",
+      "android.permission.MODIFY_AUDIO_SETTINGS",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+      "android.permission.SUSTAINED_PERFORMANCE_MODE",
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.WAKE_LOCK",
+      "io.github.toolazytoname.xiaohei.permission.WAKEWORD_EVENT",
+      "studio.weichao.xiaohei.common.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+    ]
+  },
+  "checks": {
+    "package": true,
+    "label": true,
+    "backup_disabled": true,
+    "arm64_only": true,
+    "stt_notices_present": true,
+    "signature_verified": true,
+    "zip_alignment": true,
+    "native_dependency_closure": true
+  },
+  "static_checks_pass": true,
+  "not_verified": [
+    "device_runtime",
+    "acoustic_voice",
+    "16kb_device_runtime",
+    "aab_manifest_and_play_processing",
+    "license_compliance",
+    "source_correspondence",
+    "account_eligibility",
+    "store_review"
+  ]
+}

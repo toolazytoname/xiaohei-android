@@ -8,14 +8,71 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 TAG="v1.69.2"
 VERSION="1.69.2"
 CACHE="${FILAMENT_CACHE:-/tmp/filament-16kb-rebuild}"
-SDK="${ANDROID_SDK_ROOT:-/Users/lazy/Library/Android/sdk}"
-NDK="${NDK:-$SDK/ndk/27.1.12297006}"
-CMAKE="${CMAKE:-$SDK/cmake/3.22.1/bin/cmake}"
-NINJA="${NINJA:-$(command -v ninja)}"
+NDK_VERSION="27.1.12297006"
+CMAKE_VERSION="3.22.1"
 API="${API:-21}"
 ABI="arm64-v8a"
 JOBS="${FILAMENT_BUILD_JOBS:-4}"
 PAGE_LDFLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -Wl,-z,relro -Wl,-z,now"
+# Official Maven AARs. sha256 values match the Gradle module checksums for the
+# sha1 directory names previously hardcoded in this recipe (filament-android
+# 5a03cfbde9430e575e37c691d5ebbb48672087be, filament-utils
+# 9c2512665441cda43edaa81c124c6f7e205168c7, gltfio
+# 08ea4a9ae3648329b05cdb5c6766e26c416cebde).
+AAR_FILAMENT_URL="https://repo1.maven.org/maven2/com/google/android/filament/filament-android/1.69.2/filament-android-1.69.2.aar"
+AAR_UTILS_URL="https://repo1.maven.org/maven2/com/google/android/filament/filament-utils-android/1.69.2/filament-utils-android-1.69.2.aar"
+AAR_GLTFIO_URL="https://repo1.maven.org/maven2/com/google/android/filament/gltfio-android/1.69.2/gltfio-android-1.69.2.aar"
+AAR_FILAMENT_SHA256="3108fd8a943904f278911de5a0ecbfe64fd41f4ce53596ee7ed5f0dadf616e31"
+AAR_UTILS_SHA256="1b3499cab6c612e5ef6f8fe1163d50ec25be33a57ce41f238edb38d02a36a137"
+AAR_GLTFIO_SHA256="7c7a9c3cd1bd9550a9fc61dac4be713b3c62175d09bbc6359b4e253a4d0fce66"
+SRC_TAR_SHA256="f9b0dae06f7c0ed557b8fa9e3bf11864e52f2e7ac9c86e2a018469c27b626af9"
+NATIVE_TAR_SHA256="95869e8edec9b5cd3e09f0985ea871b49cdc259317a9eb8818c38981e9cb6f56"
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+detect_host_prebuilt() {
+  local sys mach
+  sys="$(uname -s)"
+  mach="$(uname -m)"
+  case "${sys}-${mach}" in
+    Darwin-x86_64|Darwin-arm64) echo darwin-x86_64 ;;
+    Linux-x86_64) echo linux-x86_64 ;;
+    *)
+      fail "unsupported host ${sys}-${mach}. This recipe supports darwin-x86_64 and linux-x86_64 NDK prebuilts only."
+      ;;
+  esac
+}
+
+sha256_of() {
+  python3 -c 'import hashlib,sys;h=hashlib.sha256()
+f=open(sys.argv[1],"rb")
+for c in iter(lambda: f.read(1024*1024), b""):
+    h.update(c)
+print(h.hexdigest())' "$1"
+}
+
+command -v python3 >/dev/null 2>&1 || fail "python3 is required on PATH"
+
+SDK="${ANDROID_SDK_ROOT:-}"
+if [[ -z "$SDK" ]]; then
+  fail "ANDROID_SDK_ROOT is unset. Set it to an Android SDK directory containing ndk/${NDK_VERSION} and cmake/${CMAKE_VERSION}. This recipe does not guess a home SDK path."
+fi
+if [[ ! -d "$SDK" ]]; then
+  fail "ANDROID_SDK_ROOT is not a directory: $SDK"
+fi
+
+NDK="${NDK:-$SDK/ndk/$NDK_VERSION}"
+CMAKE="${CMAKE:-$SDK/cmake/${CMAKE_VERSION}/bin/cmake}"
+NINJA="${NINJA:-$SDK/cmake/${CMAKE_VERSION}/bin/ninja}"
+HOST_PREBUILT="$(detect_host_prebuilt)"
+PRE="$NDK/toolchains/llvm/prebuilt/$HOST_PREBUILT"
+READELF="$PRE/bin/llvm-readelf"
+NM="$PRE/bin/llvm-nm"
+STRIP="$PRE/bin/llvm-strip"
+TOOLCHAIN="$NDK/build/cmake/android.toolchain.cmake"
 
 DOWNLOADS="$CACHE/downloads"
 SRC_PARENT="$CACHE/src"
@@ -25,53 +82,120 @@ BUILD_DIR="$CACHE/cmake-jni"
 OUT="$ROOT/out"
 EVIDENCE="$ROOT/evidence"
 LOGS="$ROOT/logs"
-READELF="$NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-readelf"
-NM="$NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-nm"
-STRIP="$NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip"
-TOOLCHAIN="$NDK/build/cmake/android.toolchain.cmake"
 
 SRC_URL="https://github.com/google/filament/archive/refs/tags/${TAG}.tar.gz"
 NATIVE_URL="https://github.com/google/filament/releases/download/${TAG}/filament-v${VERSION}-android-native.tgz"
 SRC_TAR="$DOWNLOADS/v1.69.2.tar.gz"
 NATIVE_TAR="$DOWNLOADS/filament-v${VERSION}-android-native.tgz"
+AAR_FILAMENT_DOWNLOAD="$DOWNLOADS/filament-android-1.69.2.aar"
+AAR_UTILS_DOWNLOAD="$DOWNLOADS/filament-utils-android-1.69.2.aar"
+AAR_GLTFIO_DOWNLOAD="$DOWNLOADS/gltfio-android-1.69.2.aar"
 
-AAR_FILAMENT="${AAR_FILAMENT:-/Users/lazy/Code/crack/1plus/integrations/operit-upstream-build/gradle-home/caches/modules-2/files-2.1/com.google.android.filament/filament-android/1.69.2/5a03cfbde9430e575e37c691d5ebbb48672087be/filament-android-1.69.2.aar}"
-AAR_UTILS="${AAR_UTILS:-/Users/lazy/Code/crack/1plus/integrations/operit-upstream-build/gradle-home/caches/modules-2/files-2.1/com.google.android.filament/filament-utils-android/1.69.2/9c2512665441cda43edaa81c124c6f7e205168c7/filament-utils-android-1.69.2.aar}"
-AAR_GLTFIO="${AAR_GLTFIO:-/Users/lazy/Code/crack/1plus/integrations/operit-upstream-build/gradle-home/caches/modules-2/files-2.1/com.google.android.filament/gltfio-android/1.69.2/8ea4a9ae3648329b05cdb5c6766e26c416cebde/gltfio-android-1.69.2.aar}"
+if [[ -n "${AAR_FILAMENT:-}" ]]; then
+  [[ -f "$AAR_FILAMENT" ]] || fail "AAR_FILAMENT is set but not a file: $AAR_FILAMENT"
+else
+  AAR_FILAMENT="$AAR_FILAMENT_DOWNLOAD"
+fi
+if [[ -n "${AAR_UTILS:-}" ]]; then
+  [[ -f "$AAR_UTILS" ]] || fail "AAR_UTILS is set but not a file: $AAR_UTILS"
+else
+  AAR_UTILS="$AAR_UTILS_DOWNLOAD"
+fi
+if [[ -n "${AAR_GLTFIO:-}" ]]; then
+  [[ -f "$AAR_GLTFIO" ]] || fail "AAR_GLTFIO is set but not a file: $AAR_GLTFIO"
+else
+  AAR_GLTFIO="$AAR_GLTFIO_DOWNLOAD"
+fi
+
+[[ -x "$CMAKE" ]] || fail "cmake ${CMAKE_VERSION} missing at $CMAKE. Install SDK cmake/${CMAKE_VERSION} or set CMAKE to that executable."
+[[ -f "$TOOLCHAIN" ]] || fail "NDK ${NDK_VERSION} missing toolchain at $NDK. Install ndk/${NDK_VERSION} under ANDROID_SDK_ROOT or set NDK to that directory."
+[[ -x "$NINJA" ]] || fail "ninja missing at $NINJA. Install SDK cmake/${CMAKE_VERSION} (includes ninja) or set NINJA to that executable."
+[[ -x "$READELF" ]] || fail "llvm-readelf missing at $READELF (host prebuilt $HOST_PREBUILT). NDK layout does not match this host."
+[[ -x "$NM" ]] || fail "llvm-nm missing at $NM (host prebuilt $HOST_PREBUILT)."
+[[ -x "$STRIP" ]] || fail "llvm-strip missing at $STRIP (host prebuilt $HOST_PREBUILT)."
+[[ -f "$ROOT/wrap_aar.py" ]] || fail "wrap_aar.py missing next to build.sh"
+[[ -f "$ROOT/check_elf.py" ]] || fail "check_elf.py missing next to build.sh"
+[[ -f "$ROOT/compare_exports.py" ]] || fail "compare_exports.py missing next to build.sh"
+
+verify_aar_if_present() {
+  local path="$1" want="$2" label="$3"
+  if [[ -f "$path" ]]; then
+    local got
+    got="$(sha256_of "$path")"
+    if [[ "$got" != "$want" ]]; then
+      fail "official $label AAR sha256 mismatch for $path: got $got want $want"
+    fi
+  fi
+}
+
+# Env-provided AARs are verified immediately. Downloaded AARs are verified after fetch.
+if [[ -n "${AAR_FILAMENT:-}" && "$AAR_FILAMENT" != "$AAR_FILAMENT_DOWNLOAD" ]]; then
+  verify_aar_if_present "$AAR_FILAMENT" "$AAR_FILAMENT_SHA256" "filament-android 1.69.2"
+fi
+if [[ -n "${AAR_UTILS:-}" && "$AAR_UTILS" != "$AAR_UTILS_DOWNLOAD" ]]; then
+  verify_aar_if_present "$AAR_UTILS" "$AAR_UTILS_SHA256" "filament-utils-android 1.69.2"
+fi
+if [[ -n "${AAR_GLTFIO:-}" && "$AAR_GLTFIO" != "$AAR_GLTFIO_DOWNLOAD" ]]; then
+  verify_aar_if_present "$AAR_GLTFIO" "$AAR_GLTFIO_SHA256" "gltfio-android 1.69.2"
+fi
+
+if [[ "${RECIPE_INPUT_CHECK_ONLY:-}" == "1" ]]; then
+  python3 - "$SDK" "$NDK" "$CMAKE" "$NINJA" "$HOST_PREBUILT" "$PRE" "${AAR_FILAMENT}" "${AAR_UTILS}" "${AAR_GLTFIO}" "$NDK_VERSION" "$CMAKE_VERSION" <<'PY'
+import json, sys
+print(json.dumps({
+    "sdk": sys.argv[1],
+    "ndk": sys.argv[2],
+    "cmake": sys.argv[3],
+    "ninja": sys.argv[4],
+    "host_prebuilt": sys.argv[5],
+    "prebuilt_dir": sys.argv[6],
+    "aar_filament": sys.argv[7],
+    "aar_utils": sys.argv[8],
+    "aar_gltfio": sys.argv[9],
+    "ndk_version": sys.argv[10],
+    "cmake_version": sys.argv[11],
+    "uses_official_prebuilt_static_archives": True,
+    "not_full_corresponding_source": True,
+}, indent=2))
+PY
+  exit 0
+fi
 
 mkdir -p "$DOWNLOADS" "$SRC_PARENT" "$NATIVE_PARENT" "$BUILD_DIR" "$OUT/arm64-v8a" "$EVIDENCE" "$LOGS"
 
-fail() {
-  echo "ERROR: $*" >&2
-  exit 1
-}
-
 fetch() {
   local url="$1" dest="$2"
-  if [[ -f "$dest" ]] && gzip -t "$dest" 2>/dev/null; then
+  if [[ -f "$dest" ]]; then
     echo "using cached $(basename "$dest")"
     return 0
   fi
   echo "download $url"
-  if ! curl -L --fail --retry 3 --connect-timeout 20 -o "$dest.partial" "$url"; then
-    echo "direct failed, retry with proxy"
-    export https_proxy=http://127.0.0.1:7891 http_proxy=http://127.0.0.1:7891 all_proxy=socks5://127.0.0.1:7891
-    curl -L --fail --retry 3 --connect-timeout 20 -o "$dest.partial" "$url"
-    unset https_proxy http_proxy all_proxy
-  fi
-  gzip -t "$dest.partial" || fail "not gzip: $dest.partial"
+  curl -L --fail --retry 3 --connect-timeout 20 -o "$dest.partial" "$url"
   mv "$dest.partial" "$dest"
 }
 
-sha256_file() {
-  shasum -a 256 "$1" | awk '{print $1}'
+require_aar() {
+  local path="$1" url="$2" sha="$3" label="$4"
+  if [[ ! -f "$path" ]]; then
+    fetch "$url" "$path"
+  fi
+  [[ -f "$path" ]] || fail "official $label AAR missing: $path (set AAR env or allow download from $url)"
+  local got
+  got="$(sha256_of "$path")"
+  if [[ "$got" != "$sha" ]]; then
+    fail "official $label AAR sha256 mismatch for $path: got $got want $sha"
+  fi
 }
 
-for req in "$CMAKE" "$NINJA" "$READELF" "$NM" "$STRIP" "$TOOLCHAIN" "$AAR_FILAMENT" "$AAR_UTILS" "$AAR_GLTFIO"; do
-  [[ -e "$req" ]] || fail "missing: $req"
-done
+require_aar "$AAR_FILAMENT" "$AAR_FILAMENT_URL" "$AAR_FILAMENT_SHA256" "filament-android 1.69.2"
+require_aar "$AAR_UTILS" "$AAR_UTILS_URL" "$AAR_UTILS_SHA256" "filament-utils-android 1.69.2"
+require_aar "$AAR_GLTFIO" "$AAR_GLTFIO_URL" "$AAR_GLTFIO_SHA256" "gltfio-android 1.69.2"
 
 fetch "$NATIVE_URL" "$NATIVE_TAR"
+native_got="$(sha256_of "$NATIVE_TAR")"
+if [[ "$native_got" != "$NATIVE_TAR_SHA256" ]]; then
+  fail "filament android-native tarball sha256 mismatch: got $native_got want $NATIVE_TAR_SHA256"
+fi
 
 if [[ ! -f "$SRC/android/filament-utils-android/CMakeLists.txt" ]]; then
   GIT_SRC="$SRC_PARENT/filament-git"
@@ -80,6 +204,10 @@ if [[ ! -f "$SRC/android/filament-utils-android/CMakeLists.txt" ]]; then
     ln -sfn filament-git "$SRC"
   else
     fetch "$SRC_URL" "$SRC_TAR"
+    src_got="$(sha256_of "$SRC_TAR")"
+    if [[ "$src_got" != "$SRC_TAR_SHA256" ]]; then
+      fail "filament source tarball sha256 mismatch: got $src_got want $SRC_TAR_SHA256"
+    fi
     echo "extract source"
     tar -xzf "$SRC_TAR" -C "$SRC_PARENT"
   fi
@@ -251,10 +379,13 @@ payload = {
   "source_tar_sha256": sha("$SRC_TAR") if os.path.isfile("$SRC_TAR") else None,
   "native_tar_sha256": sha("$NATIVE_TAR"),
   "ndk": "$NDK",
+  "host_prebuilt": "$HOST_PREBUILT",
   "official_android_ndk_pin": "29.0.14206865",
-  "ndk_note": "JNI relink used local NDK 27.1; official gradle pin is 29.0.14206865. Static libs come from official android-native tarball.",
+  "ndk_note": "JNI relink used local NDK ${NDK_VERSION}; official gradle pin is 29.0.14206865. Static libs come from official android-native tarball. Path fixes do not make this full corresponding source.",
   "cmake": "$CMAKE",
   "ninja": "$NINJA",
+  "uses_official_prebuilt_static_archives": True,
+  "not_full_corresponding_source": True,
   "api": "$API",
   "abi": "$ABI",
   "stl": "c++_static",

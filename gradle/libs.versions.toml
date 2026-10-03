@@ -33,7 +33,6 @@ exoplayer = "2.19.1"
 material3-window = "1.2.0"
 window = "1.1.0"
 webkit = "1.12.1"
-itextg = "5.5.10"
 pdfbox = "2.0.27.0"
 zip4j = "2.11.5"
 coil = "2.5.0"
@@ -151,7 +150,6 @@ window = { group = "androidx.window", name = "window", version.ref = "window" }
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 
 # Document handling
-itextg = { group = "com.itextpdf", name = "itextg", version.ref = "itextg" }
 pdfbox = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox" }
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 

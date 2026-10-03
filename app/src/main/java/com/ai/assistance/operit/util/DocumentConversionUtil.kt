@@ -7,9 +7,6 @@ import android.os.ParcelFileDescriptor
 import android.text.TextUtils
 import com.ai.assistance.operit.util.AppLogger
 import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.pdmodel.PDPage
-import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
-import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import org.apache.poi.hwpf.HWPFDocument
 import org.apache.poi.hwpf.extractor.WordExtractor
@@ -19,15 +16,9 @@ import org.apache.poi.xwpf.extractor.XWPFWordExtractor
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.apache.poi.xwpf.usermodel.XWPFParagraph
 import org.apache.poi.xwpf.usermodel.XWPFRun
-import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.FileReader
-import com.itextpdf.text.Document
-import com.itextpdf.text.FontFactory
-import com.itextpdf.text.Paragraph
-import com.itextpdf.text.pdf.PdfWriter
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 
@@ -38,27 +29,8 @@ object DocumentConversionUtil {
     /** Convert text to PDF */
     fun convertTextToPdf(context: Context, sourceFile: File, targetFile: File): Boolean {
         return try {
-            val document = PDDocument()
-            val page = PDPage()
-            document.addPage(page)
-
-            PDPageContentStream(document, page).use { contentStream ->
-                BufferedReader(FileReader(sourceFile)).use { reader ->
-                    contentStream.beginText()
-                    contentStream.setFont(PDType1Font.HELVETICA, 12f)
-                    contentStream.setLeading(14.5f)
-                    contentStream.newLineAtOffset(25f, 725f)
-
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        contentStream.showText(line)
-                        contentStream.newLine()
-                    }
-                    contentStream.endText()
-                }
-            }
-            document.save(targetFile)
-            document.close()
+            val text = sourceFile.readText()
+            TextPdfWriter.write(text, targetFile)
             true
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to convert text to PDF", e)
@@ -415,26 +387,8 @@ object DocumentConversionUtil {
                     return true
                 }
                 "pdf" -> {
-                    // Convert HTML to PDF using iText
-                    val document = Document()
-                    PdfWriter.getInstance(document, FileOutputStream(targetFile))
-                    document.open()
-
-                    // Add title based on the filename
-                    val titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16f)
-                    document.add(Paragraph(sourceFile.nameWithoutExtension, titleFont))
-                    document.add(Paragraph(" ")) // Empty line
-
-                    // Parse the content for paragraphs and add them to the PDF
-                    val contentFont = FontFactory.getFont(FontFactory.HELVETICA, 12f)
-                    val contentParagraphs = textContent.split("\n\n")
-                    contentParagraphs.forEach { para ->
-                        if (para.trim().isNotEmpty()) {
-                            document.add(Paragraph(para, contentFont))
-                        }
-                    }
-
-                    document.close()
+                    // Decode HTML via platform Html, then the same text PDF writer as convertTextToPdf.
+                    TextPdfWriter.writeHtml(content, targetFile)
                     return true
                 }
                 else -> {

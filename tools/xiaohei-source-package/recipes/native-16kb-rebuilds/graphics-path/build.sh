@@ -15,15 +15,58 @@ AAR_URL="https://dl.google.com/dl/android/maven2/androidx/graphics/graphics-path
 AAR_SHA256="8ca4032b6d79b351f0b59ad4b580eddbb9423e1652f7c958830687f1eee2ec03"
 SOURCES_JAR_URL="https://dl.google.com/dl/android/maven2/androidx/graphics/graphics-path/1.0.1/graphics-path-1.0.1-sources.jar"
 SOURCES_JAR_SHA256="9f1b5995b9577a8876525c3411ebb2a49f9ef0e875f6aec3059e807596dc6ca6"
-DEFAULT_AAR="/Users/lazy/Code/crack/1plus/integrations/operit-upstream-build/gradle-home/caches/modules-2/files-2.1/androidx.graphics/graphics-path/1.0.1/7e243033abd313c7202428422a01d48691378e33/graphics-path-1.0.1.aar"
-
-NDK="${NDK:-/Users/lazy/Library/Android/sdk/ndk/27.1.12297006}"
-CMAKE="${CMAKE:-/Users/lazy/Library/Android/sdk/cmake/3.22.1/bin/cmake}"
-NINJA="${NINJA:-/Users/lazy/Library/Android/sdk/cmake/3.22.1/bin/ninja}"
+NDK_VERSION="27.1.12297006"
+CMAKE_VERSION="3.22.1"
 ABI="arm64-v8a"
 API="${API:-21}"
 SO_NAME="libandroidx.graphics.path.so"
 PAGE_LDFLAGS="-Wl,-z,common-page-size=16384"
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+detect_host_prebuilt() {
+  local sys mach
+  sys="$(uname -s)"
+  mach="$(uname -m)"
+  case "${sys}-${mach}" in
+    Darwin-x86_64|Darwin-arm64) echo darwin-x86_64 ;;
+    Linux-x86_64) echo linux-x86_64 ;;
+    *)
+      fail "unsupported host ${sys}-${mach}. This recipe supports darwin-x86_64 and linux-x86_64 NDK prebuilts only."
+      ;;
+  esac
+}
+
+sha256_of() {
+  python3 -c 'import hashlib,sys;h=hashlib.sha256()
+f=open(sys.argv[1],"rb")
+for c in iter(lambda: f.read(1024*1024), b""):
+    h.update(c)
+print(h.hexdigest())' "$1"
+}
+
+command -v python3 >/dev/null 2>&1 || fail "python3 is required on PATH"
+
+SDK="${ANDROID_SDK_ROOT:-}"
+if [[ -z "$SDK" ]]; then
+  fail "ANDROID_SDK_ROOT is unset. Set it to an Android SDK directory containing ndk/${NDK_VERSION} and cmake/${CMAKE_VERSION}. This recipe does not guess a home SDK path."
+fi
+if [[ ! -d "$SDK" ]]; then
+  fail "ANDROID_SDK_ROOT is not a directory: $SDK"
+fi
+
+NDK="${NDK:-$SDK/ndk/$NDK_VERSION}"
+CMAKE="${CMAKE:-$SDK/cmake/${CMAKE_VERSION}/bin/cmake}"
+NINJA="${NINJA:-$SDK/cmake/${CMAKE_VERSION}/bin/ninja}"
+HOST_PREBUILT="$(detect_host_prebuilt)"
+PRE="$NDK/toolchains/llvm/prebuilt/$HOST_PREBUILT"
+READELF="${READELF:-$PRE/bin/llvm-readelf}"
+NM="${NM:-$PRE/bin/llvm-nm}"
+CLANG="$PRE/bin/clang"
+LIBCXX_INC="$PRE/sysroot/usr/include/c++/v1"
 
 DOWNLOADS="$ROOT/downloads"
 SRC_PARENT="$ROOT/source"
@@ -33,23 +76,61 @@ BUILD_DIR="$ROOT/build/arm64-v8a"
 OUT_DIR="$ROOT/out/arm64-v8a"
 EVIDENCE="$ROOT/evidence"
 ARCHIVE="$DOWNLOADS/graphics-path-${COMMIT:0:7}.tar.gz"
-AAR_LOCAL="${GRAPHICS_PATH_AAR:-$DEFAULT_AAR}"
 AAR_DOWNLOAD="$DOWNLOADS/graphics-path-1.0.1.aar"
-PRE="$NDK/toolchains/llvm/prebuilt/darwin-x86_64"
-READELF="${READELF:-$PRE/bin/llvm-readelf}"
-NM="${NM:-$PRE/bin/llvm-nm}"
-CLANG="$PRE/bin/clang"
-LIBCXX_INC="$PRE/sysroot/usr/include/c++/v1"
 CACHE_DIR="${GRAPHICS_PATH_CACHE:-/tmp/graphics-path-16kb-rebuild}"
 
-mkdir -p "$DOWNLOADS" "$SRC_PARENT" "$BUILD_DIR" "$OUT_DIR" "$EVIDENCE" "$CACHE_DIR"
+if [[ -n "${GRAPHICS_PATH_AAR:-}" ]]; then
+  AAR_LOCAL="$GRAPHICS_PATH_AAR"
+  [[ -f "$AAR_LOCAL" ]] || fail "GRAPHICS_PATH_AAR is set but not a file: $AAR_LOCAL"
+else
+  AAR_LOCAL="$AAR_DOWNLOAD"
+fi
 
-for req in "$CMAKE" "$NINJA" "$NDK/build/cmake/android.toolchain.cmake" "$READELF" "$NM" "$LIBCXX_INC/cstdlib"; do
-  if [[ ! -e "$req" ]]; then
-    echo "missing: $req" >&2
-    exit 1
+if [[ ! -x "$CMAKE" ]]; then
+  fail "cmake ${CMAKE_VERSION} missing at $CMAKE. Install SDK cmake/${CMAKE_VERSION} or set CMAKE to that executable."
+fi
+if [[ ! -f "$NDK/build/cmake/android.toolchain.cmake" ]]; then
+  fail "NDK ${NDK_VERSION} missing toolchain at $NDK. Install ndk/${NDK_VERSION} under ANDROID_SDK_ROOT or set NDK to that directory."
+fi
+if [[ ! -x "$NINJA" ]]; then
+  fail "ninja missing at $NINJA. Install SDK cmake/${CMAKE_VERSION} (includes ninja) or set NINJA to that executable."
+fi
+if [[ ! -x "$READELF" ]]; then
+  fail "llvm-readelf missing at $READELF (host prebuilt $HOST_PREBUILT). NDK layout does not match this host."
+fi
+if [[ ! -x "$NM" ]]; then
+  fail "llvm-nm missing at $NM (host prebuilt $HOST_PREBUILT)."
+fi
+if [[ ! -f "$LIBCXX_INC/cstdlib" ]]; then
+  fail "libc++ headers missing at $LIBCXX_INC/cstdlib (host prebuilt $HOST_PREBUILT)."
+fi
+
+if [[ -n "${GRAPHICS_PATH_AAR:-}" ]]; then
+  got="$(sha256_of "$AAR_LOCAL")"
+  if [[ "$got" != "$AAR_SHA256" ]]; then
+    fail "official graphics-path 1.0.1 AAR sha256 mismatch for $AAR_LOCAL: got $got want $AAR_SHA256"
   fi
-done
+fi
+
+if [[ "${RECIPE_INPUT_CHECK_ONLY:-}" == "1" ]]; then
+  python3 - "$SDK" "$NDK" "$CMAKE" "$NINJA" "$HOST_PREBUILT" "$PRE" "${GRAPHICS_PATH_AAR:-}" "$NDK_VERSION" "$CMAKE_VERSION" <<'PY'
+import json, sys
+print(json.dumps({
+    "sdk": sys.argv[1],
+    "ndk": sys.argv[2],
+    "cmake": sys.argv[3],
+    "ninja": sys.argv[4],
+    "host_prebuilt": sys.argv[5],
+    "prebuilt_dir": sys.argv[6],
+    "aar": sys.argv[7],
+    "ndk_version": sys.argv[8],
+    "cmake_version": sys.argv[9],
+}, indent=2))
+PY
+  exit 0
+fi
+
+mkdir -p "$DOWNLOADS" "$SRC_PARENT" "$BUILD_DIR" "$OUT_DIR" "$EVIDENCE" "$CACHE_DIR"
 
 fetch() {
   local url="$1" dest="$2"
@@ -57,19 +138,13 @@ fetch() {
     return 0
   fi
   echo "downloading $url"
-  if curl -fsSL --max-time 60 -o "$dest" "$url"; then
-    return 0
-  fi
-  echo "direct fetch failed, retry with local proxy" >&2
-  https_proxy=http://127.0.0.1:7891 http_proxy=http://127.0.0.1:7891 \
-    all_proxy=socks5://127.0.0.1:7891 \
-    curl -fsSL --max-time 60 -o "$dest" "$url"
+  curl -fsSL --max-time 60 -o "$dest" "$url"
 }
 
 sha_ok() {
   local path="$1" want="$2"
   local got
-  got="$(shasum -a 256 "$path" | awk '{print $1}')"
+  got="$(sha256_of "$path")"
   if [[ "$got" != "$want" ]]; then
     echo "sha256 mismatch for $path: got $got want $want" >&2
     return 1
@@ -270,14 +345,14 @@ PY
 META="$EVIDENCE/meta.json"
 python3 - "$META" "$ROOT" "$COMMIT" "$PREV_COMMIT" "$ARCHIVE_URL" "$ARCHIVE_SHA256" \
   "$AAR_LOCAL" "$AAR_SHA256" "$NDK" "$CMAKE" "$NINJA" "$CLANG" "$API" "$ABI" \
-  "$CXXFLAGS" "$LDFLAGS" "$OUT_DIR/$SO_NAME" "$AAR_OUT" "$ARCHIVE" <<'PY'
+  "$CXXFLAGS" "$LDFLAGS" "$OUT_DIR/$SO_NAME" "$AAR_OUT" "$ARCHIVE" "$HOST_PREBUILT" <<'PY'
 import hashlib, json, os, subprocess, sys
 from pathlib import Path
 
 (
     meta_path, root, commit, prev, archive_url, archive_sha,
     aar, aar_sha, ndk, cmake, ninja, clang, api, abi,
-    cxxflags, ldflags, so, aar_out, archive,
+    cxxflags, ldflags, so, aar_out, archive, host_prebuilt,
 ) = sys.argv[1:]
 
 def sha(p):
@@ -340,7 +415,7 @@ meta = {
         "ninja": ninja,
         "clang": clang,
         "clang_version": clang_ver,
-        "host_prebuilt": "darwin-x86_64",
+        "host_prebuilt": host_prebuilt,
     },
     "original_aar": aar,
     "original_aar_sha256": aar_sha,

@@ -884,7 +884,6 @@ dependencies {
     implementation(libs.androidx.webkit)
 
     // Document conversion libraries
-    implementation(libs.itextg)
     implementation(libs.pdfbox)
     implementation(libs.zip4j)
     

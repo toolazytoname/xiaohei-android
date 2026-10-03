@@ -1,0 +1,15 @@
+{
+  "status": "wrote",
+  "path": "docs/release/2026-10-03-hardening/NOTICE-third-party.md",
+  "bytes": 30072,
+  "declared_entries": 134,
+  "todo_count": 0,
+  "todos": [],
+  "kinds": {
+    "maven": 116,
+    "bom": 2,
+    "files": 6,
+    "plugin": 8,
+    "native": 2
+  }
+}

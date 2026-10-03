@@ -58,7 +58,6 @@ private fun getOpenSourceLibraries(): List<OpenSourceLibrary> {
         // Document Processing
         OpenSourceLibrary("Apache PDFBox", "Java library for working with PDF documents", "Apache-2.0", "https://pdfbox.apache.org/"),
         OpenSourceLibrary("Apache POI", "Document processing library (Excel, Word, PowerPoint)", "Apache-2.0", "https://poi.apache.org/"),
-        OpenSourceLibrary("iText (v5)", "Library for creating and manipulating PDF files", "MPL/LGPL", "https://itextpdf.com/"),
 
         // APK Tools
         OpenSourceLibrary("apk-parser", "A parser for APK files", "Apache-2.0", "https://github.com/hsiafan/apk-parser"),

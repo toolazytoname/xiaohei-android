@@ -1,0 +1,30 @@
+{
+  "source_archive_reused_hash_verified": true,
+  "fresh_source_and_build_directories": true,
+  "network_download_not_exercised": true,
+  "production_aar_sha256": "04ba93f9ef2a13099871dd4d684d1ea884f3fc1c3c13359eb104d0d069d92955",
+  "rebuilt_aar_sha256": "024c4a82ea0dcfc02bd6db07f00f7e0b7cd4d9e2cd58c9939866450ea36099f3",
+  "common_members_equal": {
+    "R.txt": true,
+    "AndroidManifest.xml": true,
+    "classes.jar": true,
+    "proguard.txt": true,
+    "res/": true,
+    "res/values/": true,
+    "res/values/values.xml": true,
+    "META-INF/com/android/build/gradle/aar-metadata.properties": true,
+    "jni/": true,
+    "jni/arm64-v8a/": true,
+    "jni/arm64-v8a/libpl_droidsonroids_gif.so": true
+  },
+  "production_only": [
+    "jni/armeabi-v7a/",
+    "jni/armeabi-v7a/libpl_droidsonroids_gif.so",
+    "jni/x86/",
+    "jni/x86/libpl_droidsonroids_gif.so",
+    "jni/x86_64/",
+    "jni/x86_64/libpl_droidsonroids_gif.so"
+  ],
+  "rebuilt_only": [],
+  "device_test": false
+}
