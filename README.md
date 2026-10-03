@@ -1,3 +1,7 @@
+> **小黑 Android 开发分支**：本仓库基于固定 Operit v1.12.1 开发，不是上游官方发行。
+> 当前两版本范围、构建依赖缺口和验证边界见 [README.XIAOHEI.md](README.XIAOHEI.md)。
+> 下方保留上游原始介绍；其中上游下载/功能不代表小黑已上线或已验收。
+
 <h1 align="center">
   <img src="app/src/main/assets/logo.svg" width="48" height="48" align="absmiddle" alt=""> Operit AI
 </h1>

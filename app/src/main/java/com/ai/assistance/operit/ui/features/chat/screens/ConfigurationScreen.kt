@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.assistance.operit.BuildConfig
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.data.model.ApiKeyFormatValidator
 import com.ai.assistance.operit.ui.common.input.bringIntoViewOnImeFocus
@@ -32,6 +33,16 @@ fun ConfigurationScreen(
         onNavigateToTokenConfig: () -> Unit = {},
         onNavigateToModelConfig: () -> Unit = {}
 ) {
+        // 共同版空配置若继续展示 Operit/DeepSeek 主入口，会把用户送去第三方 Token
+        // 流程，而不是自己的兼容接口配置页。
+        if (BuildConfig.COMMON_BASE) {
+                XiaoheiConfigurationScreen(
+                        isSaving = isSaving,
+                        onNavigateToModelConfig = onNavigateToModelConfig
+                )
+                return
+        }
+
         var apiKeyInput by remember(apiKey) { mutableStateOf(apiKey) }
         var showApiKeyFormatError by remember { mutableStateOf(false) }
         var showTokenInfoDialog by remember { mutableStateOf(false) }
