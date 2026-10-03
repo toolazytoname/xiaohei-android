@@ -2,6 +2,8 @@ package com.ai.assistance.operit.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.ai.assistance.operit.BuildConfig
+import com.ai.assistance.operit.ui.features.agreement.XiaoheiAgreementContent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,10 +21,13 @@ class AgreementPreferences(context: Context) {
 
     /** Check whether the user has accepted the current agreement version. */
     fun isAgreementAccepted(): Boolean {
-        return prefs.getString(KEY_ACCEPTED_AGREEMENT_VERSION, null) == CURRENT_AGREEMENT_VERSION
+        return XiaoheiAgreementContent.isRecordedVersionCurrent(
+            prefs.getString(KEY_ACCEPTED_AGREEMENT_VERSION, null),
+            CURRENT_AGREEMENT_VERSION
+        )
     }
 
-    /** Records acceptance of the agreement version bundled with this app release. */
+    /** Records acknowledgement of the notice version bundled with this app build. */
     fun acceptCurrentAgreement() {
         prefs.edit()
             .putString(KEY_ACCEPTED_AGREEMENT_VERSION, CURRENT_AGREEMENT_VERSION)
@@ -31,7 +36,16 @@ class AgreementPreferences(context: Context) {
     }
 
     companion object {
-        /** Bump this value whenever the user agreement changes substantively. */
-        const val CURRENT_AGREEMENT_VERSION = "2026-07-15"
+        /**
+         * Build-specific notice id. Same SharedPreferences name and key as before so existing
+         * stored values stay in place. A stored Operit 2026-07-15 value must not count as a new
+         * 小黑 notice, so COMMON_BASE writes a different id per profile.
+         */
+        val CURRENT_AGREEMENT_VERSION: String
+            get() =
+                XiaoheiAgreementContent.resolveAgreementVersion(
+                    commonBase = BuildConfig.COMMON_BASE,
+                    commonStore = BuildConfig.COMMON_STORE
+                )
     }
 }
