@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -54,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
 import com.ai.assistance.operit.core.commonbase.CommonBaseUiResiduePolicy
 import com.ai.assistance.operit.core.avatar.common.control.AvatarSettingKeys
 import com.ai.assistance.operit.core.avatar.common.state.AvatarEmotion
@@ -65,6 +67,8 @@ import com.ai.assistance.operit.data.preferences.CharacterCardManager
 import com.ai.assistance.operit.data.preferences.CharacterGroupCardManager
 import com.ai.assistance.operit.data.preferences.ActivePromptManager
 import com.ai.assistance.operit.data.model.ActivePrompt
+import com.ai.assistance.operit.data.model.ChatMessage
+import com.ai.assistance.operit.data.model.InputProcessingState
 import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.data.preferences.WakeWordPreferences
@@ -77,6 +81,7 @@ import com.ai.assistance.operit.ui.floating.FloatingMode
 import com.ai.assistance.operit.ui.floating.ui.fullscreen.components.BottomControlBar
 import com.ai.assistance.operit.ui.floating.ui.fullscreen.components.EditPanel
 import com.ai.assistance.operit.ui.floating.ui.fullscreen.components.MessageDisplay
+import com.ai.assistance.operit.ui.floating.ui.fullscreen.components.VoiceSessionActionBar
 import com.ai.assistance.operit.ui.floating.ui.fullscreen.components.WaveVisualizerSection
 import com.ai.assistance.operit.ui.floating.ui.fullscreen.viewmodel.rememberFloatingFullscreenModeViewModel
 import com.ai.assistance.operit.ui.theme.LocalThemePreferenceSnapshot
@@ -188,6 +193,9 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     val autoNewChatGroup by wakePrefs.autoNewChatGroupFlow.collectAsState(initial = WakeWordPreferences.DEFAULT_AUTO_NEW_CHAT_GROUP)
     
     val volumeLevel by viewModel.volumeLevelFlow.collectAsState()
+    val isTtsSpeaking by viewModel.speechManager.voiceService.speakingStateFlow.collectAsState(
+        initial = viewModel.speechManager.voiceService.isSpeaking
+    )
     
     var pendingSpeechPreview by remember { mutableStateOf<String?>(null) }
     var lastUserMessageTimestampBeforeSpeech by remember { mutableStateOf<Long?>(null) }
@@ -246,6 +254,12 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
     }
 
     val latestMessage = floatContext.messages.lastOrNull()
+    val isAiAnswering = isFullscreenAiAnswering(
+        inputState = floatContext.inputProcessingState.value,
+        isVoiceCapturePausedForAi = viewModel.isVoiceCapturePausedForAi,
+        isSpeaking = isTtsSpeaking,
+        lastMessage = latestMessage
+    )
 
     // 监听最新的AI消息
     LaunchedEffect(latestMessage?.timestamp) {
@@ -482,10 +496,19 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
         
         // 主内容区域
         val isBottomBarVisible = viewModel.showBottomControls && !viewModel.isEditMode && !effectiveWaveActive
+        val showCommonVoiceActions = CommonBaseProfile.isEnabled && effectiveWaveActive
+        val navigationBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val voiceActionReserve = 96.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (isBottomBarVisible) 120.dp else 32.dp)
+                .padding(
+                    bottom = when {
+                        showCommonVoiceActions -> voiceActionReserve + navigationBottomPadding
+                        isBottomBarVisible -> 120.dp
+                        else -> 32.dp
+                    }
+                )
         ) {
             // 波浪可视化和头像：仅在语音模式下显示
             if (effectiveWaveActive) {
@@ -644,6 +667,24 @@ fun FloatingFullscreenMode(floatContext: FloatContext) {
             volumeLevel = volumeLevel,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+
+        if (showCommonVoiceActions) {
+            // 共同版语音态需要带文字的停止入口。点头像和关图标仍在，但不能当作发现性。
+            // 停止回答只在中断条件成立时可点，走显式 stopAnswering 中断入口，不随过期的 UI 状态切换模式，不是静音。
+            // 结束语音先取消回答生产者再 exitWaveMode：停 TTS 和录音；关悬浮窗仍是右上角 cleanup+onClose。
+            VoiceSessionActionBar(
+                stopAnsweringEnabled = isAiAnswering,
+                showListenContinuesHint = isAiAnswering,
+                onStopAnswering = { viewModel.stopAnswering() },
+                onEndVoice = {
+                    autoEnteringVoice = false
+                    viewModel.endVoiceSession()
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .zIndex(10f)
+            )
+        }
     }
 }
 
@@ -660,4 +701,23 @@ private fun rememberNoiseBitmap(size: Int = 120): ImageBitmap {
         bitmap.setPixels(pixels, 0, size, 0, 0, size, size)
         bitmap.asImageBitmap()
     }
+}
+
+private fun isFullscreenAiAnswering(
+    inputState: InputProcessingState,
+    isVoiceCapturePausedForAi: Boolean,
+    isSpeaking: Boolean,
+    lastMessage: ChatMessage?
+): Boolean {
+    if (isVoiceCapturePausedForAi || isSpeaking) {
+        return true
+    }
+    val stateBusy =
+        inputState !is InputProcessingState.Idle &&
+            inputState !is InputProcessingState.Completed &&
+            inputState !is InputProcessingState.Error
+    val streamBusy =
+        lastMessage?.sender == "think" ||
+            (lastMessage?.sender == "ai" && lastMessage.contentStream != null)
+    return stateBusy || streamBusy
 }

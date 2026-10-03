@@ -1,0 +1,42 @@
+{
+  "status": "artifacts_written",
+  "stage": "complete-local-static",
+  "exit_code": 0,
+  "utc": "2026-10-02T14:21:53Z",
+  "metadata_updated_utc": "2026-10-02T15:29:43Z",
+  "independent_verification": false,
+  "variant": "cpu-only",
+  "not_equivalent_to_maven_aar": true,
+  "not_equivalent_to_maven_multi_abi_multi_ep": true,
+  "providers_built": [
+    "CPU"
+  ],
+  "providers_not_built": [
+    "NNAPI",
+    "XNNPACK",
+    "WebGPU"
+  ],
+  "telemetry": "OFF",
+  "onnxruntime_USE_TELEMETRY": "OFF",
+  "jdk_required": "17",
+  "jdk_used": "/Users/lazy/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home",
+  "jdk21_jlink_known_fail": true,
+  "jni_compare_exit": 2,
+  "jni_libonnxruntime4j_jni": "173/173 identical Java_/JNI_On* dynamic symbols vs Maven AAR arm64 JNI",
+  "jni_libonnxruntime_telemetry": "Maven baseline libonnxruntime.so has 8 Java_ai_onnxruntime_telemetry_HttpClient_* exports; rebuilt has 0 because onnxruntime_USE_TELEMETRY=OFF. This app is not expected to call those native entry points.",
+  "device_test": false,
+  "runtime_vad_vits_tested": false,
+  "telemetry_native_entry_points_expected": false,
+  "product_gradle": false,
+  "multi_abi": false,
+  "out_so": "/Users/lazy/Code/crack/1plus/integrations/operit-upstream-build/onnx-16kb-rebuild/out/arm64-v8a",
+  "out_aar": "/Users/lazy/Code/crack/1plus/integrations/operit-upstream-build/onnx-16kb-rebuild/out/onnxruntime-android-1.29.0-arm64-cpu-16kb.aar",
+  "artifacts": {
+    "aar_bytes": 8286755,
+    "aar_sha256": "263f1ea768438829ee145892aa65f8f3ed7cc5d857438cf40a0bf753c00369fc",
+    "libonnxruntime_so_bytes": 22224184,
+    "libonnxruntime_so_sha256": "eb8e9924ed01828126df267623fe3f8c1aaf89d535e51c00ac805e47aac1010b",
+    "libonnxruntime4j_jni_so_bytes": 116464,
+    "libonnxruntime4j_jni_so_sha256": "16bd8dc0b7462821bb069b9f52f50aa993d17347dc09a019aeda8dc360d15edc"
+  }
+}

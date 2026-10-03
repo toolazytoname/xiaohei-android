@@ -14,6 +14,8 @@ import com.ai.assistance.operit.data.model.TagType
 import com.ai.assistance.operit.data.model.TavernCharacterCard
 import com.ai.assistance.operit.data.model.TavernCharacterData
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.core.commonbase.CommonBaseProfile
+import com.ai.assistance.operit.core.commonbase.XiaoheiIdentityPolicy
 import com.ai.assistance.operit.data.model.TavernExtensions
 import com.ai.assistance.operit.data.model.OperitTavernExtension
 import com.ai.assistance.operit.data.model.OperitAttachedTagPayload
@@ -67,6 +69,7 @@ class CharacterCardManager private constructor(private val context: Context) {
         // 默认角色卡ID
         const val DEFAULT_CHARACTER_CARD_ID = "default_character"
 
+        // 上游默认显示名，也是共同版“未自定义”的匹配键。共同版写入走 XiaoheiIdentityPolicy。
         const val DEFAULT_CHARACTER_NAME = "Operit"
         
         @Volatile
@@ -521,6 +524,18 @@ class CharacterCardManager private constructor(private val context: Context) {
                 // 设置默认角色卡数据
                 setupDefaultCharacterCard(preferences, defaultCardId)
             }
+            // 共同版只改未自定义的默认卡显示名。放进同一 edit，避免另开协程改持久化语义。
+            migrateUncustomizedDefaultDisplayName(preferences)
+        }
+
+        // Retry an interrupted rename before exposing the renamed default card to chats.
+        // DataStore and Room cannot share one transaction, so keep a durable pending bit.
+        val pendingRenameKey = booleanPreferencesKey("xiaohei_default_name_chat_rename_pending")
+        if (CommonBaseProfile.isEnabled && dataStore.data.first()[pendingRenameKey] == true) {
+            ChatHistoryManager.getInstance(context).renameCharacterCardInChats(
+                DEFAULT_CHARACTER_NAME, XiaoheiIdentityPolicy.COMMON_BASE_DEFAULT_CHARACTER_NAME
+            )
+            dataStore.edit { it.remove(pendingRenameKey) }
         }
 
         val activePromptManager = ActivePromptManager.getInstance(context)
@@ -539,9 +554,14 @@ class CharacterCardManager private constructor(private val context: Context) {
                 if (defaultAvatarUri.isNullOrBlank()) {
                     userPreferencesManager.saveAiAvatarForCharacterCard(
                         DEFAULT_CHARACTER_CARD_ID,
-                        "file:///android_asset/operit.png",
+                        XiaoheiIdentityPolicy.defaultAvatarUri(CommonBaseProfile.isEnabled),
                     )
                 }
+            }
+            // 头像只在当前值等于已知上游原值、且策略给出品牌 URI 时改写。未知品牌 URI 不写。
+            // 非共同版跳过这次读取，避免给上游初始化多一次头像 Flow 收集。
+            if (CommonBaseProfile.isEnabled) {
+                migrateUncustomizedDefaultAvatar()
             }
 
         }
@@ -566,7 +586,7 @@ class CharacterCardManager private constructor(private val context: Context) {
         activePromptManager.resetThemeDraft(defaultTarget, currentTheme)
         activePromptManager.saveAiAvatarForPrompt(
             defaultTarget,
-            "file:///android_asset/operit.png",
+            XiaoheiIdentityPolicy.defaultAvatarUri(CommonBaseProfile.isEnabled),
         )
     }
     
@@ -590,7 +610,11 @@ class CharacterCardManager private constructor(private val context: Context) {
         val createdAtKey = longPreferencesKey("character_card_${id}_created_at")
         val updatedAtKey = longPreferencesKey("character_card_${id}_updated_at")
 
-        preferences[nameKey] = DEFAULT_CHARACTER_NAME
+        preferences[nameKey] =
+            XiaoheiIdentityPolicy.defaultCharacterDisplayName(
+                commonBaseEnabled = CommonBaseProfile.isEnabled,
+                upstreamDefaultName = DEFAULT_CHARACTER_NAME
+            )
         preferences[descriptionKey] = CharacterCardBilingualData.getDefaultDescription(context)
         preferences[characterSettingKey] = CharacterCardBilingualData.getDefaultCharacterSetting(context)
         preferences[openingStatementKey] = ""
@@ -608,6 +632,39 @@ class CharacterCardManager private constructor(private val context: Context) {
         preferences[isDefaultKey] = true
         preferences[createdAtKey] = System.currentTimeMillis()
         preferences[updatedAtKey] = System.currentTimeMillis()
+    }
+
+    private fun migrateUncustomizedDefaultDisplayName(preferences: MutablePreferences) {
+        val id = DEFAULT_CHARACTER_CARD_ID
+        val nameKey = stringPreferencesKey("character_card_${id}_name")
+        val otherNames = preferences[CHARACTER_CARD_LIST].orEmpty()
+            .filter { it != id }
+            .mapNotNull { preferences[stringPreferencesKey("character_card_${it}_name")] }
+        // Chats bind by name; do not rename another user's same-named card's chats.
+        if (XiaoheiIdentityPolicy.hasConflictingCardName(otherNames)) return
+        val nextName =
+            XiaoheiIdentityPolicy.migratedDefaultDisplayName(
+                commonBaseEnabled = CommonBaseProfile.isEnabled,
+                cardId = id,
+                currentName = preferences[nameKey],
+                defaultCardId = DEFAULT_CHARACTER_CARD_ID,
+                upstreamDefaultName = DEFAULT_CHARACTER_NAME
+            ) ?: return
+        preferences[nameKey] = nextName
+        preferences[booleanPreferencesKey("xiaohei_default_name_chat_rename_pending")] = true
+    }
+
+    private suspend fun migrateUncustomizedDefaultAvatar() {
+        val currentUri =
+            userPreferencesManager.getAiAvatarForCharacterCardFlow(DEFAULT_CHARACTER_CARD_ID).first()
+        val nextUri =
+            XiaoheiIdentityPolicy.migratedDefaultAvatarUri(
+                commonBaseEnabled = CommonBaseProfile.isEnabled,
+                cardId = DEFAULT_CHARACTER_CARD_ID,
+                currentAvatarUri = currentUri,
+                defaultCardId = DEFAULT_CHARACTER_CARD_ID
+            ) ?: return
+        userPreferencesManager.saveAiAvatarForCharacterCard(DEFAULT_CHARACTER_CARD_ID, nextUri)
     }
     
     // 获取所有角色卡

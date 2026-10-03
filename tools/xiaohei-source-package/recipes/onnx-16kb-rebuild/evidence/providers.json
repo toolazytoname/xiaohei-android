@@ -1,0 +1,32 @@
+{
+  "variant": "cpu-only",
+  "not_equivalent_to_maven_aar": true,
+  "not_equivalent_to_maven_multi_abi_multi_ep": true,
+  "multi_abi": false,
+  "app_usage": "ai.onnxruntime is used only in OnnxSileroVad.kt and VitsVoiceProvider.kt; SessionOptions set threads/optimization only; addNnapi/addXnnpack/addWebGPU not called; tool plugin entry disabled under COMMON_BASE",
+  "this_build_ep": [
+    "CPU"
+  ],
+  "maven_1_29_0_aar_ep": [
+    "CPU",
+    "NNAPI",
+    "XNNPACK",
+    "WebGPU"
+  ],
+  "explicitly_off": {
+    "onnxruntime_USE_NNAPI_BUILTIN": "OFF",
+    "onnxruntime_USE_XNNPACK": "OFF",
+    "onnxruntime_USE_WEBGPU": "OFF",
+    "onnxruntime_USE_TELEMETRY": "OFF"
+  },
+  "telemetry": {
+    "onnxruntime_USE_TELEMETRY": "OFF",
+    "native_httpclient_jni_in_rebuilt_libonnxruntime": false,
+    "app_expected_to_call_telemetry_native_entry_points": false
+  },
+  "kept": "default full operators retained so CPU VAD/VITS inference remains in scope; runtime VAD/VITS not tested",
+  "runtime_vad_vits_tested": false,
+  "java_classes_jar": "unchanged from official 1.29.0 AAR; Java API may still expose unused EP methods; this local AAR is not a Maven multi-ABI/multi-EP replacement",
+  "utc": "2026-10-02T14:20:56Z",
+  "metadata_updated_utc": "2026-10-02T15:29:43Z"
+}

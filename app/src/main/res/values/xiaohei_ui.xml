@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="xiaohei_voice_stop_answering">停止回答</string>
+    <string name="xiaohei_voice_end_session">结束语音</string>
+    <string name="xiaohei_voice_stop_answering_listen_continues">停止回答后仍会继续听</string>
+</resources>

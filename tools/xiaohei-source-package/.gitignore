@@ -1,0 +1,9 @@
+out/
+__pycache__/
+*.pyc
+recipes/**/build/
+recipes/**/downloads/
+recipes/**/source/
+recipes/**/cache/
+recipes/**/logs/
+recipes/**/out/

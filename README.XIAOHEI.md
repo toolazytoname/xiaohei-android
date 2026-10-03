@@ -4,10 +4,10 @@
 
 ## 两个版本
 
-| 构建 | 包名 | 边界 |
+| 构建 / 桌面名称 | 包名 | 边界 |
 |---|---|---|
-| `commonRelease` | `studio.weichao.xiaohei` | 普通安卓基础助手；默认不需要Root，不默认自主跨App无障碍操作 |
-| `common` | `studio.weichao.xiaohei.common` | 增强自用侧载/可调试；OnePlus系统助手/DSP独立验收 |
+| `commonRelease` / **小黑** | `studio.weichao.xiaohei` | 普通安卓基础助手；默认不需要Root，不默认自主跨App无障碍操作 |
+| `common` / **小黑·增强（+徽记）** | `studio.weichao.xiaohei.common` | 增强自用侧载/可调试；OnePlus系统助手/DSP独立验收 |
 
 两包可并存，不覆盖官方Operit或历史共同版。模型接口由用户自行配置；源码、官网、报告不包含个人端点和密钥。
 
@@ -40,3 +40,12 @@ terminal子模块固定`e4442bc6a047b6165bf59103721ad143149c620d`，本地16KB�
 - 产品/设备入口：https://github.com/toolazytoname/xiaohei-phone-agent
 - 目标官网：https://xiaohei.weichao.studio （官网已独立部署并核验HTTPS；不表示App已发布）
 - 源码开发分支：`feat/common-base`
+
+## 版本辨识与源码工具（2026-10-03 UTC）
+
+普通版保留原图标；增强版增加琥珀色加号，桌面名称为“小黑·增强”。两者包名、签名、入口组件均保持不变，可直接覆盖更新，不应清数据。application/MainActivity独立指定名称，避免上游本地化字符串把它们重新标成Operit。
+
+共同版默认角色采用自有名称/头像；只迁移已知默认值，保留自定义设置。角色名迁移同步处理按名绑定的会话（有同名自定义卡则不迁移）。语音面板新增“停止回答”（继续听）与“结束语音”（取消生成/播报及录音），不等于声学验收已通过。
+
+- `tools/xiaohei-release/`：实际APK/AAB静态检查；增强版通过不表示其16KB通过。
+- `tools/xiaohei-source-package/`：二进制图标可重建的源码补丁、固定子模块归档、六个本地AAR的实际哈希与配方。未声称干净环境可复现或全部许可证义务完成；不分发私有签名/模型凭据。

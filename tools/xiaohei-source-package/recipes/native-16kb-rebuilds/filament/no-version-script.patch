@@ -1,0 +1,42 @@
+diff --git a/android/filament-android/CMakeLists.txt b/android/filament-android/CMakeLists.txt
+index dec19c5..7903191 100644
+--- a/android/filament-android/CMakeLists.txt
++++ b/android/filament-android/CMakeLists.txt
+@@ -86,7 +86,8 @@ if (FILAMENT_ENABLE_MATDBG)
+ endif()
+ 
+ set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
+-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
++# 16kb-relink: skip version-script so C++/ZSTD exports match Maven 1.69.2 AARs
++# set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
+ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+ 
+ add_library(filament-jni SHARED
+diff --git a/android/filament-utils-android/CMakeLists.txt b/android/filament-utils-android/CMakeLists.txt
+index 3e00ee0..cbfe1aa 100644
+--- a/android/filament-utils-android/CMakeLists.txt
++++ b/android/filament-utils-android/CMakeLists.txt
+@@ -55,7 +55,8 @@ set_target_properties(perfetto PROPERTIES IMPORTED_LOCATION
+         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libperfetto.a)
+ 
+ set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.map")
+-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
++# 16kb-relink: skip version-script so C++/ZSTD exports match Maven 1.69.2 AARs
++# set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
+ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+ 
+ add_library(filament-utils-jni SHARED
+diff --git a/android/gltfio-android/CMakeLists.txt b/android/gltfio-android/CMakeLists.txt
+index 303dd27..d7ca0a2 100644
+--- a/android/gltfio-android/CMakeLists.txt
++++ b/android/gltfio-android/CMakeLists.txt
+@@ -58,7 +58,8 @@ set_target_properties(uberarchive PROPERTIES IMPORTED_LOCATION
+         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libuberarchive.a)
+ 
+ set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
+-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
++# 16kb-relink: skip version-script so C++/ZSTD exports match Maven 1.69.2 AARs
++# set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
+ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+ 
+ set(GLTFIO_SRCS

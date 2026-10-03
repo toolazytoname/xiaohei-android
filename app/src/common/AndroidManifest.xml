@@ -146,16 +146,27 @@
       allowBackup=false alone does not stop some OEM device-transfer; XML rules
       are required. In-app user export/import is unchanged. See docs/common-backup-policy.md.
     -->
+    <!--
+      common and commonRelease share this overlay, so launcher mipmap cannot
+      be a same-name resource override. buildType placeholders select
+      ic_launcher_simple vs ic_launcher_xiaohei_enhanced. Activity names stay.
+    -->
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="${xiaoheiCleartextAllowed}"
         android:dataExtractionRules="@xml/common_data_extraction_rules"
         android:fullBackupContent="@xml/common_backup_rules"
-        android:icon="@mipmap/ic_launcher_simple"
+        android:label="${xiaoheiAppLabel}"
+        android:icon="${xiaoheiLauncherIcon}"
         android:requestLegacyExternalStorage="false"
-        android:roundIcon="@mipmap/ic_launcher_simple_round"
+        android:roundIcon="${xiaoheiLauncherRoundIcon}"
         android:theme="@style/Theme.Operit"
-        tools:replace="android:theme,android:icon,android:roundIcon,android:requestLegacyExternalStorage,android:allowBackup,android:fullBackupContent,android:dataExtractionRules,android:usesCleartextTraffic">
+        tools:replace="android:label,android:theme,android:icon,android:roundIcon,android:requestLegacyExternalStorage,android:allowBackup,android:fullBackupContent,android:dataExtractionRules,android:usesCleartextTraffic">
+        <!-- Do not let upstream localized app_name strings erase variant identity. -->
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:label="${xiaoheiAppLabel}"
+            tools:replace="android:label" />
         <!-- Common users share chosen attachments/exports, never the entire private data root. -->
         <provider
             android:name=".provider.OperitDataDocumentsProvider"

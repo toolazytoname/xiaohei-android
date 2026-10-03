@@ -505,7 +505,12 @@ android {
             manifestPlaceholders["xiaoheiDspPermission"] = "io.github.toolazytoname.xiaohei.permission.WAKEWORD_EVENT"
             manifestPlaceholders["xiaoheiDspCompanionPackage"] = "io.github.toolazytoname.xiaohei.dsp"
             manifestPlaceholders["xiaoheiCleartextAllowed"] = "true"
-            resValue("string", "app_name", "小黑")
+            // Shared common overlay cannot override launcher mipmap by name;
+            // placeholders pick the badged icon only for this enhanced id.
+            manifestPlaceholders["xiaoheiAppLabel"] = "小黑·增强"
+            manifestPlaceholders["xiaoheiLauncherIcon"] = "@mipmap/ic_launcher_xiaohei_enhanced"
+            manifestPlaceholders["xiaoheiLauncherRoundIcon"] = "@mipmap/ic_launcher_xiaohei_enhanced_round"
+            resValue("string", "app_name", "小黑·增强")
             // Large unused assets are dropped after merge by the common-base
             // SingleArtifact.ASSETS transform. Do not exclude them from sourceSets.main
             // or generatedMainAssetsDir (those inputs are shared with other buildTypes).
@@ -521,6 +526,9 @@ android {
             manifestPlaceholders["xiaoheiDspPermission"] = "studio.weichao.xiaohei.permission.DSP_DISABLED"
             manifestPlaceholders["xiaoheiDspCompanionPackage"] = "studio.weichao.xiaohei"
             manifestPlaceholders["xiaoheiCleartextAllowed"] = "false"
+            manifestPlaceholders["xiaoheiAppLabel"] = "小黑"
+            manifestPlaceholders["xiaoheiLauncherIcon"] = "@mipmap/ic_launcher_simple"
+            manifestPlaceholders["xiaoheiLauncherRoundIcon"] = "@mipmap/ic_launcher_simple_round"
             buildConfigField("boolean", "COMMON_ENHANCED", "false")
             resValue("string", "app_name", "小黑")
             // Same keystore as release, but v2+v3 only. Do not use APK rotation signing.

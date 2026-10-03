@@ -512,6 +512,27 @@ class FloatingFullscreenModeViewModel(
         speechManager.speak(text, interrupt = true)
     }
 
+    /** A labeled stop must never toggle voice off if the answer just finished. */
+    fun stopAnswering() {
+        if (!isWaveActive || !shouldInterceptCenterAvatarClick()) return
+        val dropCurrent = speechManager.userMessage.isNotBlank()
+        interruptAiTurnAndResumeCapture(
+            dropCurrentUtterance = dropCurrent,
+            suppressDuplicateStop = dropCurrent,
+        )
+    }
+
+    /** Stop producers too, so a queued stream cannot resume speech after ending voice. */
+    fun endVoiceSession() {
+        floatContext.onCancelMessage?.invoke()
+        aiStreamJob?.cancel()
+        aiStreamJob = null
+        activeAiStreamIdentity = null
+        ttsSpeakJob?.cancel()
+        ttsSpeakJob = null
+        exitWaveMode()
+    }
+
     fun onCenterAvatarClick() {
         if (isWaveActive && shouldInterceptCenterAvatarClick()) {
             val dropCurrent = speechManager.userMessage.isNotBlank()

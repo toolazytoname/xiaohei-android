@@ -1,0 +1,21 @@
+Filament 1.69.2 16KB JNI relink
+================================
+
+Upstream: https://github.com/google/filament
+Tag: v1.69.2
+License: Apache License 2.0 (see LICENSE-filament.txt after extract, or
+http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+This directory contains a local rebuild recipe. It is not a Google release
+and not a product Gradle / device result.
+
+Static engine libraries come from the official GitHub asset
+filament-v1.69.2-android-native.tgz. JNI shared objects are relinked from
+the matching tag sources with:
+
+  -Wl,-z,max-page-size=16384
+  -Wl,-z,common-page-size=16384
+
+Official v1.69.2 Android CMake already sets max-page-size only, which is why
+LOAD 16KB passes on Maven AARs while GNU_RELRO end alignment fails for
+libfilament-jni.so and libfilament-utils-jni.so.
